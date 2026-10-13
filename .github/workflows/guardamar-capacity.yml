@@ -1,0 +1,50 @@
+name: Guardamar OCI audit only
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Tests only (default) or explicitly authorized read-only OCI audit"
+        type: choice
+        required: true
+        default: tests
+        options:
+          - tests
+          - audit
+permissions:
+  contents: read
+concurrency:
+  group: guardamar-oci-audit
+  cancel-in-progress: false
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - run: python -m unittest discover -s tests -v
+  audit:
+    needs: tests
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.mode == 'audit'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - run: python -m pip install "oci==2.185.2"
+      - name: Run read-only OCI audit
+        env:
+          OCI_TENANCY_OCID: ${{ secrets.OCI_TENANCY_OCID }}
+          OCI_USER_OCID: ${{ secrets.OCI_USER_OCID }}
+          OCI_FINGERPRINT: ${{ secrets.OCI_FINGERPRINT }}
+          OCI_PRIVATE_KEY: ${{ secrets.OCI_PRIVATE_KEY }}
+          OCI_COMPARTMENT_OCID: ${{ secrets.OCI_COMPARTMENT_OCID }}
+          OCI_AVAILABILITY_DOMAIN: ${{ secrets.OCI_AVAILABILITY_DOMAIN }}
+          OCI_IMAGE_OCID: ${{ secrets.OCI_IMAGE_OCID }}
+          OCI_SUBNET_OCID: ${{ secrets.OCI_SUBNET_OCID }}
+          OCI_TARGET_DISPLAY_NAME: ${{ secrets.OCI_TARGET_DISPLAY_NAME }}
+        run: python -m automation.guardamar_capacity audit
