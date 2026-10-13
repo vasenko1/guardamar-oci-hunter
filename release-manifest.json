@@ -1,6 +1,6 @@
 {
   "files": {
-    ".github/workflows/guardamar-capacity.yml": "5aa2f25d0fe651130098f893d1ce5d64faa11028b9bee7ce7625084bf34067d3",
+    ".github/workflows/guardamar-capacity.yml": "917b4e27cd0b438425058bea169f661718f4dd7ec448d2321b3f7ba5051429c8",
     "automation/__init__.py": "e61f6ba8d611986e59ba8690056225f1d604e0484066ae6dc87ca32497ac23c6",
     "automation/guardamar_capacity.py": "af1928d8956c7e2a817a8d663b6cfa26f28d57bcc9fde21f7bd033e44c38322f",
     "tests/test_guardamar_capacity.py": "d96eb79f242e7933c6a962b187de9f50b911ed2ba830b56b86bc92130d6966f6"
