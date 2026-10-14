@@ -75,9 +75,12 @@ def require_main_and_state_protected(
     if (not isinstance(main_sha, str) or len(main_sha) != 40
             or any(c not in "0123456789abcdef" for c in main_sha)):
         raise ProtectionBlocked("main_identity_not_verified")
-    if (not isinstance(rulesets, (list, tuple))
-            or not rulesets or len(rulesets) > 100):
-        raise ProtectionBlocked("ruleset_list_unavailable")
+    # Conservative first deployment contract: the entire repository may
+    # have exactly two rulesets, one exact source main and one exact state.
+    # Additional wildcard/org/tag/push rules require an explicit re-review;
+    # silently ignoring overlapping rules could misstate actual protection.
+    if (not isinstance(rulesets, (list, tuple)) or len(rulesets) != 2):
+        raise ProtectionBlocked("ruleset_list_not_exactly_reviewed")
 
     def match(ref: str) -> set[str]:
         # More than one exact matching ruleset is ambiguous because GitHub
