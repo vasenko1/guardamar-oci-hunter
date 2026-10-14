@@ -26,8 +26,8 @@ CANONICAL = (b'{"active_memory_gb":null,"active_run_id":null,'
              b'"phase":"OPEN","reason":"INITIAL","spent_run_ids":[],"version":1}')
 CONFIRM = "APPEND-ONE-NOOP-COMMIT"
 API_ROOT = "/repos/" + REPO
-SHA = re.compile(r"[0-9a-f]{40}\\Z")
-NUMERIC = re.compile(r"[1-9][0-9]{0,19}\\Z")
+SHA = re.compile(r"[0-9a-f]{40}\Z")
+NUMERIC = re.compile(r"[1-9][0-9]{0,19}\Z")
 GRAPHQL = ("mutation CAS($input:UpdateRefsInput!){"
            "updateRefs(input:$input){clientMutationId}}")
 CLIENT_ID = "fence-token-noop-probe-v1"
