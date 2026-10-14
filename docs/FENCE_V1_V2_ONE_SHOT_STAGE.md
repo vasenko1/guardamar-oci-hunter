@@ -114,6 +114,21 @@ or requested. The one-shot migration still requires explicit owner
 approval and a fresh separate preflight. **Do not infer permission to
 execute from matching timestamps or from green tests.**
 
+### Actual read-only job-token verification
+
+The temporary same-repo `contents:read` token probe initially failed
+closed because GitHub redacted `bypass_actors`. After adding exact
+owner-reviewed rule-update timestamps, the full real GitHub preflight
+**passed**, not just the mocked tests. See
+[Actions #38641163517](https://github.com/vasenko1/guardamar-oci-hunter/actions/runs/38641163517),
+which printed `READ_ONLY_RULESET_PREFLIGHT_OK`.
+The diagnostic step made only GET requests and did not change the
+protected branch, source main or OCI. It was then **removed from PR CI**;
+its evidence remains archived in that run and research. The permanent
+`source-head-inventory` and offline tests remain. The future
+`contents:write` execution path, new blob/tree Git Data POSTs and
+actual v2 ref update have **not** been attempted with a live token.
+
 ## Explicit dependencies and unresolved production gates
 
 The known ledger ref currently has only the parentless genesis and one
