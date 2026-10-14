@@ -85,3 +85,20 @@ break-before-make owner-approved cutover.
 This is **manifest parity only**, not safety parity for the full live
 state machine, including 429 detection, run draining, readiness observation
 and ambiguous OCI writes. Those remain separately gated.
+
+## Offline state reducer — not a distributed lock
+
+`automation.launch_state` is a deterministic pure-data model. Its tests
+cover 429 at preflight/in flight, failure on unknown provider responses,
+one **modelled** write-budget consumption, capacity misses, ambiguous
+responses, discovery of zero/one/multiple target records, and READY only
+after accepted/running/matching/public IPv4.
+
+**Critical limitation:** an immutable `RunState` object by itself is not
+a durable fence. If a caller reuses the old `PREPARED` object, the reducer
+can derive a new `WAIT_RESPONSE` state; a process restart also discards the
+state. The future OCI writer MUST enforce exactly one physical SDK create
+call with a separately audited one-shot per-workflow guard, no SDK retry,
+and stable retry token. After any uncertain response, no new creation is
+allowed until explicit operator investigation. No source here currently
+has a production LaunchInstance call.
