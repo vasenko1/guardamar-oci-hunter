@@ -20,6 +20,7 @@ from automation import fence_watermark_v2 as v2
 from automation import fence_migration_preview as plan
 from automation import github_fence_readonly as reader
 from automation.github_fence_store import GitHubHttpTransport, TransportUnavailable
+from automation import github_fence_store as gh_transport
 from tools import fence_v1_v2_one_shot as migrate
 
 MAIN = "a4b0ce37f909f59f88aa667ea470a1e85258d33c"
@@ -313,6 +314,54 @@ class MigrationTests(unittest.TestCase):
             migrate.run_migration(api, invocation())
         self.assertEqual(api.graphql_calls, 1)
         self.assertNotEqual(api.current, plan.EXPECTED_TIP)
+
+    def test_actual_http_ruleset_list_is_only_array_exception(self):
+        """Unlike most REST results, GitHub GET /rulesets returns JSON array."""
+        class Response(io.BytesIO):
+            status = 200
+            def __init__(self, value):
+                super().__init__(json.dumps(value).encode("utf-8"))
+        class Opener:
+            def __init__(self, value):
+                self.value = value
+            def open(self, request, timeout=None):
+                self_method = request.get_method()
+                assert self_method == "GET"
+                return Response(self.value)
+
+        api = GitHubHttpTransport("test-token-no-real-github-credential")
+        base = reader.ROOT
+        expected = [{"id": migrate.MAIN_RULE_ID},
+                    {"id": migrate.STATE_RULE_ID}]
+        with patch.object(gh_transport.urllib.request, "build_opener",
+                          return_value=Opener(expected)):
+            self.assertEqual(api.request("GET", base + "/rulesets"), expected)
+        # Arrays are NOT valid responses for any other fixed REST GET.
+        with patch.object(gh_transport.urllib.request, "build_opener",
+                          return_value=Opener(expected)):
+            with self.assertRaises(TransportUnavailable):
+                api.request("GET", base)
+        # Error payload, too-large and malformed items all fail shut.
+        for invalid in ({"message": "Not Found"}, [1],
+                        [{"errors": ["bad"]}], list(range(101))):
+            with patch.object(gh_transport.urllib.request, "build_opener",
+                              return_value=Opener(invalid)):
+                with self.assertRaises(TransportUnavailable):
+                    api.request("GET", base + "/rulesets")
+
+    def test_github_preflight_exact_ruleset_immutability(self):
+        """A similarly named but different ruleset may not pass policy."""
+        for key, value in (
+            ("enforcement", "evaluate"),
+            ("source", "other/owner"),
+            ("current_user_can_bypass", "always"),
+        ):
+            with self.subTest(key=key):
+                api = MockGitHub()
+                api.rules[migrate.STATE_RULE_ID][key] = value
+                with self.assertRaises(migrate.MigrationBlocked):
+                    migrate.run_migration(api, invocation())
+                self.assertEqual(api.mutating_calls, [])
 
     def test_workflow_trigger_and_source_stay_oci_free(self):
         from pathlib import Path
