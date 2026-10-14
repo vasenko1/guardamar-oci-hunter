@@ -40,6 +40,7 @@ jobs:
           automation/fence_watermark_v2.py
           automation/github_fence_readonly.py
           automation/github_fence_v2_store.py
+          automation/fence_migration_preview.py
           automation/github_fence_store.py
           automation/fence_rules_audit.py
           tests/test_github_fence_store.py
@@ -50,6 +51,7 @@ jobs:
           tests/test_fence_watermark_v2.py
           tests/test_github_fence_readonly.py
           tests/test_github_fence_v2_store.py
+          tests/test_fence_migration_preview.py
       - name: Run read-only candidate regression tests
         env:
           PYTHONDONTWRITEBYTECODE: "1"
