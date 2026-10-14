@@ -1,8 +1,9 @@
 """GitHub exact-before-OID CAS backend; UNWIRED from all workflows.
 
 No OCI client or launch functionality exists in this module. Using this in
-production requires a separately approved GitHub write principal, a protected
-state ref, an initialized ledger and live authorization/cutover review.
+production requires a separately approved dedicated state repository, a GitHub
+write principal scoped only to that repository, a protected state ref, an
+initialized ledger and live authorization/cutover review.
 GraphQL updateRefs(beforeOid=...) is the atomic server-side primitive.
 REST git update-reference with force=false is NOT an exact compare-and-swap.
 """
@@ -18,7 +19,7 @@ from typing import Any, Protocol
 
 from .durable_fence import MAX_JOURNAL_SIZE, FenceBlocked, decode
 
-REPO = "vasenko1/guardamar-oci-hunter"
+REPO = "vasenko1/guardamar-oci-fence"
 FENCE_REF = "refs/heads/oci-fence-state"
 FENCE_PATH = "fence-record.json"
 SHA1_RE = re.compile(r"[0-9a-f]{40}\Z")
