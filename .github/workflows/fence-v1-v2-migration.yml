@@ -1,0 +1,85 @@
+name: Manual one-time protected OCI fence schema v1-to-v2 migration (OCI-free)
+
+# INERT IN DRAFT. This workflow is NEVER triggered by PR, push, schedule,
+# or a second repository. After independent review/merge, the owner must
+# deliberately dispatch it ONE TIME with BOTH exact confirmations.
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "Type MIGRATE-APPROVED-V1-OPEN-TO-V2-ONCE"
+        type: string
+        required: true
+      expected_old_head:
+        description: "Exact immutable old fence SHA: ed78b480980cdfd03841349ac0164d92c66a9add"
+        type: string
+        required: true
+
+permissions: {}
+
+concurrency:
+  group: guarded-oci-v1-v2-migration-single-operator
+  cancel-in-progress: false
+
+jobs:
+  offline-tests:
+    if: >-
+      github.repository == 'vasenko1/guardamar-oci-hunter' &&
+      github.event_name == 'workflow_dispatch' &&
+      github.ref == 'refs/heads/main' &&
+      github.ref_protected == true &&
+      github.actor == 'vasenko1' &&
+      github.run_attempt == 1 &&
+      inputs.confirm == 'MIGRATE-APPROVED-V1-OPEN-TO-V2-ONCE' &&
+      inputs.expected_old_head == 'ed78b480980cdfd03841349ac0164d92c66a9add'
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Checkout audited protected main, no persistent token
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Configure Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Recheck migration adversarial tests without any writes
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: python -m unittest discover -s tests -p test_fence_v1_v2_one_shot.py -v
+
+  one-confirmed-schema-cas:
+    needs: offline-tests
+    if: >-
+      github.repository == 'vasenko1/guardamar-oci-hunter' &&
+      github.event_name == 'workflow_dispatch' &&
+      github.ref == 'refs/heads/main' &&
+      github.ref_protected == true &&
+      github.actor == 'vasenko1' &&
+      github.run_attempt == 1 &&
+      inputs.confirm == 'MIGRATE-APPROVED-V1-OPEN-TO-V2-ONCE' &&
+      inputs.expected_old_head == 'ed78b480980cdfd03841349ac0164d92c66a9add'
+    # This GITHUB_TOKEN is repository scoped, not branch scoped.
+    # Branch protection and strict HTTP allowlists must also be verified.
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Checkout reviewed main without persisting credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Configure Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Apply ONE CAS only after original-protected-ref and ruleset verification
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MIGRATION_CONFIRM: ${{ inputs.confirm }}
+          MIGRATION_EXPECTED_OLD_HEAD: ${{ inputs.expected_old_head }}
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: python -B -m tools.fence_v1_v2_one_shot

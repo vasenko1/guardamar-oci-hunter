@@ -25,9 +25,74 @@ jobs:
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
+      - name: Install pinned OCI SDK for offline model tests only
+        run: python -m pip install "oci==2.185.2"
       - name: Check Python module syntax
-        run: python -m py_compile automation/guardamar_capacity.py tests/test_guardamar_capacity.py
+        run: >-
+          python -m py_compile
+          automation/guardamar_capacity.py
+          automation/launch_contract.py
+          automation/launch_intent.py
+          automation/launch_state.py
+          automation/oci_error_policy.py
+          automation/oci_sdk_models.py
+          automation/durable_fence.py
+          automation/fence_watermark_v2.py
+          automation/github_fence_readonly.py
+          automation/github_fence_v2_store.py
+          automation/fence_migration_preview.py
+          tools/fence_v1_v2_one_shot.py
+          automation/github_fence_store.py
+          automation/fence_rules_audit.py
+          tests/test_github_fence_store.py
+          tests/test_fence_rules_audit.py
+          tests/test_guardamar_capacity.py
+          tests/test_oci_sdk_models.py
+          tests/test_durable_fence.py
+          tests/test_fence_watermark_v2.py
+          tests/test_github_fence_readonly.py
+          tests/test_github_fence_v2_store.py
+          tests/test_fence_migration_preview.py
+          tests/test_fence_v1_v2_one_shot.py
       - name: Run read-only candidate regression tests
         env:
           PYTHONDONTWRITEBYTECODE: "1"
         run: python -m unittest discover -s tests -v
+
+  source-head-inventory:
+    # The default pull_request checkout is GitHub's synthetic merge tree.
+    # Independently validate the actual PR HEAD to detect files that
+    # exist only in main while the candidate manifest already pins them.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Checkout exact PR source commit without persisted credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Assert standalone source HEAD fully matches SHA-256 allowlist
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+          import subprocess
+
+          m = json.loads(Path("release-manifest.json").read_text())
+          assert m.get("mode") == "audit-only"
+          expected = set(m["files"]) | {"release-manifest.json"}
+          data = subprocess.check_output(["git", "ls-files", "-z"])
+          present = {s.decode("utf-8") for s in data.split(bytes([0])) if s}
+          assert present == expected, {
+              "missing_from_head": sorted(expected - present),
+              "unreviewed_head_files": sorted(present - expected),
+          }
+          for path, digest in m["files"].items():
+              assert hashlib.sha256(Path(path).read_bytes()).hexdigest() == digest, path
+          print("HEAD_INVENTORY_OK: all exact PR-head tracked bytes match manifest.")
+          PY
+
