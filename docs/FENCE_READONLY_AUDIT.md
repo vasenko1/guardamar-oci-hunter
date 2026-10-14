@@ -39,13 +39,16 @@ immediate parent count and format; it does **not** cryptographically audit
 the entire historical chain back to genesis. It cannot detect every forged
 historical forward-only commit by an otherwise authorized writer.
 
-The temporary PR-only live check is conditioned on head branch
-`research/readonly-fence-inspector` belonging to this repository; it
-cannot run for forked PRs and isn't installed on protected main because
-the PR is Draft. The ephemeral PR `GITHUB_TOKEN` has `contents:read`.
-After collecting the live evidence, remove the temporary CI network
-dependency before any merge, or give it a separate explicitly reviewed
-one-shot lifecycle. Never turn it into a write-capable workflow.
+The temporary PR-only live check was executed successfully in
+[GitHub Actions #38626377904](https://github.com/vasenko1/guardamar-oci-hunter/actions/runs/38626377904):
+`READ_ONLY_OK: protected existing fence at approved v1 no-op revision`.
+It was gated to the same-repository test branch, used only ephemeral
+`contents:read` and had no OCI environment or secrets. **After collecting
+this evidence, the temporary CI network step was removed** so subsequent
+pull requests cannot depend on an aging fixed historical HEAD. This Draft
+PR retains the reusable GET-only module, optional explicitly invoked
+read-only CLI smoke entry point, and pure offline regression tests.
+Never turn this verification into a write-capable workflow.
 
 ## Acceptance evidence required
 
