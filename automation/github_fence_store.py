@@ -65,6 +65,10 @@ class GitHubHttpTransport:
             allowed = (
                 path == base
                 or path == base + "/git/ref/heads/oci-fence-state"
+                or path == base + "/branches/oci-fence-state"
+                or bool(re.fullmatch(
+                    re.escape(base) + r"/git/trees/[0-9a-f]{40}", path
+                ))
                 or bool(re.fullmatch(
                     re.escape(base) + r"/git/commits/[0-9a-f]{40}", path
                 ))
@@ -216,6 +220,10 @@ class GitHubCASStore:
         except Exception:
             raise TransportUnavailable("github_fence_read_unavailable") from None
 
+    def _validate_proposed_record(self, new_record: bytes) -> None:
+        """Default v1 strict codec. v2 overrides without changing v1 readers."""
+        decode(new_record)
+
     def cas(self, expected_revision: str, new_record: bytes) -> bool:
         """Publish a new single-parent commit with exact beforeOid compare.
 
@@ -224,7 +232,7 @@ class GitHubCASStore:
         """
         parent = self._sha(expected_revision)
         try:
-            decode(new_record)
+            self._validate_proposed_record(new_record)
             if type(new_record) is not bytes or len(new_record) > 400_000:
                 raise ValueError("invalid proposed document")
 
