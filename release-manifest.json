@@ -1,9 +1,34 @@
 {
   "files": {
+    ".github/workflows/fence-token-probe.yml": "ab110b3917524ac43cc20f8a2f33e7a288980705f1d2182d999d35dcc53799ef",
     ".github/workflows/guardamar-capacity.yml": "917b4e27cd0b438425058bea169f661718f4dd7ec448d2321b3f7ba5051429c8",
+    ".github/workflows/pr-tests.yml": "5b455d92c9e95c45a6264ec5949c36dce567541afb1fc8877f8095b4178785fb",
     "automation/__init__.py": "e61f6ba8d611986e59ba8690056225f1d604e0484066ae6dc87ca32497ac23c6",
-    "automation/guardamar_capacity.py": "af1928d8956c7e2a817a8d663b6cfa26f28d57bcc9fde21f7bd033e44c38322f",
-    "tests/test_guardamar_capacity.py": "d96eb79f242e7933c6a962b187de9f50b911ed2ba830b56b86bc92130d6966f6"
+    "automation/durable_fence.py": "b848b590043d5be2d743f765b2f172dcf9d452dc2e086ffde4f8828dd68faad2",
+    "automation/fence_rules_audit.py": "d902d410fe6b00d8d8de807da5d69e8ca811a134ccd6a2035cfa1cbea1850ec5",
+    "automation/fence_watermark_v2.py": "1f625ff7f5ca1747f7fcfa61848672ab504e9befce3ac0091dd326d63de6d263",
+    "automation/github_fence_store.py": "fc9bbe01be6a9a9b8a5c48c8704c595d46f004da8b0856ccc8c5dc45d815846f",
+    "automation/guardamar_capacity.py": "fe3d233591fbb5877d99abd96958c1657124324f17a561a43e6efd3d3a29c828",
+    "automation/launch_contract.py": "c3b5f4375cefcb94376fbf7f6b819709e345baa338981a0617dd7490afdf99c3",
+    "automation/launch_intent.py": "d969a9da1e80fe20ae9d153418bd3ddf0dec0887f6313fb32165d2d373371a63",
+    "automation/launch_state.py": "d46e759972d8f129e680ba1fe935927cc1ffdef72a521c3a3a323dd7db74a22e",
+    "automation/oci_error_policy.py": "031c595856d1e34468111072294213d35f2248902b6187c098899729469771f7",
+    "automation/oci_sdk_models.py": "c15b9494a2498be9d1d6534605903c14f7c1767762dc1b338f11c20908a2b003",
+    "docs/CUTOVER_RUNBOOK.md": "2270f0d724e9f577cdbe01239dbf88896763ce6210666ff3fabc49436cebeb1d",
+    "docs/FENCE_TOKEN_PROBE.md": "197d957e9c9ea8138188b9e990fc7e41aff60dbcc094eea8744e1cae80ff3836",
+    "docs/FENCE_WATERMARK_V2_PROPOSAL.md": "8bac3bf9ecba38c03f7df2a6fb3ae9bc58216a35fbd76b5038b743df5138b695",
+    "tests/test_durable_fence.py": "0d60b079c9cf39177b7252b1e3cb5cf4c09853956bbb0d29d65b8527736c526b",
+    "tests/test_fence_rules_audit.py": "4e93662691df50028b7e23589cdd9c2dc4ebcb35caa53a70d87557ca95c9447c",
+    "tests/test_fence_token_noop_probe.py": "7d4129549957149af9bfea610fd1e4da53fb92c88704a221f2e23840dfca80d0",
+    "tests/test_fence_watermark_v2.py": "2fdc8e3c7a77d4339eb2c66ec0efc11724aa0f8986232b4ca9c62ec3c8f3c4ad",
+    "tests/test_github_fence_store.py": "437a12962b435be2a8b301cee68543029dc1fabad9f6da20514dc94a67f252ad",
+    "tests/test_guardamar_capacity.py": "d96eb79f242e7933c6a962b187de9f50b911ed2ba830b56b86bc92130d6966f6",
+    "tests/test_launch_contract.py": "c795cf845e617665e7156ffb7d9d12ff0e282e481c859702b697db696d1a8e1f",
+    "tests/test_launch_intent.py": "51e3f0598b1cb0c03c187a1be76fd98760a949ed7ba40a29b31f8ec1ac7b2788",
+    "tests/test_launch_state.py": "6a79eb07be262dc2476b0027db2c057374343df0284425e3ec719b73ddb54085",
+    "tests/test_oci_sdk_models.py": "605d9621c1e1c96a11bed66bc76bac8e340816fe039754a0d70953c05c4c471a",
+    "tests/test_release_safety.py": "0c220e51662d0047178ed766019bfc3c5740f582b48456d3a37a404592e7cb25",
+    "tools/fence_token_noop_probe.py": "1331283fa3c07a21b5f4042eda91b38873e0fa13576af78aafb6593ab41b4e13"
   },
   "mode": "audit-only"
 }
