@@ -11,7 +11,7 @@
     "automation/oci_error_policy.py": "031c595856d1e34468111072294213d35f2248902b6187c098899729469771f7",
     "automation/oci_sdk_models.py": "c15b9494a2498be9d1d6534605903c14f7c1767762dc1b338f11c20908a2b003",
     "docs/CUTOVER_RUNBOOK.md": "b1cef891c8da167cd62695566fde39c05badb82e3e8332e39d34b40405b49412",
-    "tests/test_durable_fence.py": "85ff2d0775abe1da84e692b5c654695a3571aadfc38eee53de631cc0ff4ed8e7",
+    "tests/test_durable_fence.py": "0d60b079c9cf39177b7252b1e3cb5cf4c09853956bbb0d29d65b8527736c526b",
     "tests/test_guardamar_capacity.py": "d96eb79f242e7933c6a962b187de9f50b911ed2ba830b56b86bc92130d6966f6",
     "tests/test_launch_contract.py": "c795cf845e617665e7156ffb7d9d12ff0e282e481c859702b697db696d1a8e1f",
     "tests/test_launch_intent.py": "51e3f0598b1cb0c03c187a1be76fd98760a949ed7ba40a29b31f8ec1ac7b2788",
