@@ -56,7 +56,7 @@ class Api:
     def request(self, method: str, path: str, body: dict | None = None) -> dict:
         # This script's token is allowed to access only the same repository.
         require((path == "/graphql" and method == "POST") or
-                (path.startswith(API_ROOT + "/") and
+                ((path == API_ROOT or path.startswith(API_ROOT + "/")) and
                  (method == "GET" or
                   (method == "POST" and path == API_ROOT + "/git/commits"))),
                 "DISALLOWED_ENDPOINT")
@@ -152,7 +152,7 @@ def preflight(api: Api) -> str:
 
 def repository_node_id(api: Api) -> str:
     # Strictly require the repository identity, not an input-supplied GraphQL ID.
-    repo = api.request("GET", API_ROOT + "/")
+    repo = api.request("GET", API_ROOT)
     require(repo.get("full_name") == REPO and
             isinstance(repo.get("node_id"), str) and bool(repo["node_id"]),
             "REPOSITORY_MISMATCH")
