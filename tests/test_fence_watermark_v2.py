@@ -249,6 +249,30 @@ class WatermarkTests(unittest.TestCase):
                 with self.assertRaises(v2.FenceBlocked):
                     v2.decode(blob)
 
+    def test_claim_count_never_exceeds_positive_highest_id(self):
+        # Two distinct increasing positive integers cannot have maximum 1.
+        impossible = v2.WatermarkRecord(
+            "OPEN", "CAPACITY_MISS", "1", 2,
+        )
+        with self.assertRaisesRegex(
+            v2.FenceBlocked, "watermark_count_exceeds_highest_id"
+        ):
+            v2.encode(impossible)
+        canonical = json.loads(v2.plan_v1_open_upgrade(v1.initial_record_bytes()))
+        canonical.update({
+            "reason": "CAPACITY_MISS", "highest_spent_run_id": "1",
+            "claims_committed": 2,
+        })
+        with self.assertRaises(v2.FenceBlocked):
+            v2.decode(json.dumps(
+                canonical, sort_keys=True, separators=(",", ":")
+            ).encode("ascii"))
+        # Count equals maximum is possible only for claims 1,2,...,N.
+        possible = v2.WatermarkRecord(
+            "OPEN", "CAPACITY_MISS", "2", 2,
+        )
+        self.assertEqual(v2.decode(v2.encode(possible)), possible)
+
     def test_claim_counter_exhaustion_is_a_safe_halt(self):
         obj = v2.WatermarkRecord("OPEN", "CAPACITY_MISS", "111",
                                  v2.MAX_CLAIM_COUNT)
