@@ -68,8 +68,16 @@ def read_config(env: Mapping[str, str]) -> dict[str, str]:
     return config
 
 
-def check_snapshot(snapshot: Snapshot) -> str:
-    """Do not confuse resource safety preflight with physical host capacity."""
+def check_snapshot(snapshot: Snapshot, *, memory_gb: float = REQUIRED_MEMORY_GB) -> str:
+    """Read-only budget gate: 6 GB audit default, 2 GB for offline preview."""
+    if type(memory_gb) not in (int, float) or memory_gb not in (6.0, 2.0):
+        raise AuditError("unapproved_memory_profile")
+    if not all(type(flag) is bool for flag in (
+        snapshot.image_ok, snapshot.subnet_ok, snapshot.shape_ok,
+    )):
+        raise AuditError("invalid_resource_state")
+    if type(snapshot.target_count) is not int:
+        raise AuditError("invalid_instance_count")
     numbers = (
         snapshot.ocpu_used, snapshot.ram_used,
         snapshot.free_storage_used, snapshot.ocpu_available,
@@ -89,13 +97,13 @@ def check_snapshot(snapshot: Snapshot) -> str:
         return "RESOURCE_BLOCKED"
     if (
         snapshot.ocpu_used + REQUIRED_OCPU > MAX_FREE_OCPU
-        or snapshot.ram_used + REQUIRED_MEMORY_GB > MAX_FREE_MEMORY_GB
+        or snapshot.ram_used + memory_gb > MAX_FREE_MEMORY_GB
         or snapshot.free_storage_used + REQUIRED_STORAGE_GB > MAX_FREE_STORAGE_GB
     ):
         return "FREE_TIER_BLOCKED"
     if (
         snapshot.ocpu_available < REQUIRED_OCPU
-        or snapshot.ram_available < REQUIRED_MEMORY_GB
+        or snapshot.ram_available < memory_gb
         or snapshot.storage_available < REQUIRED_STORAGE_GB
     ):
         return "LIMIT_BLOCKED"
