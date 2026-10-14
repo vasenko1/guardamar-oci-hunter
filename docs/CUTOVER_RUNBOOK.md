@@ -102,3 +102,33 @@ call with a separately audited one-shot per-workflow guard, no SDK retry,
 and stable retry token. After any uncertain response, no new creation is
 allowed until explicit operator investigation. No source here currently
 has a production LaunchInstance call.
+
+## Stage 3 — unprivileged OCI SDK model compatibility (Draft PR #5)
+
+The SDK adapter in `automation/oci_sdk_models.py` only constructs the
+**real** `oci==2.185.2` typed nested models from the approved offline
+intent. It cannot create `ComputeClient`, sign requests or call
+`LaunchInstance`. The fake `LaunchInstance` is invoked **once in tests
+only**, on a local Mock, with a `NoneRetryStrategy` marker. This must never
+be presented as verification of a real cloud write.
+
+`automation/oci_error_policy.py` classifies error responses into a
+closed set without exposing exception text. A 429/TooManyRequests takes
+precedence even if the same provider message says Out of Host Capacity.
+Unexpected errors are ambiguous, requiring manual discovery and stop.
+
+The offline adapter refuses `GITHUB_RUN_ATTEMPT != "1"`, unexpected
+event/branch/repository, unprotected refs, invalid commit syntax,
+unconsumed simulated state, mismatched retry token, and any deviation
+from the fixed reviewed manifest/digests. These are **defense-in-depth,
+not authorization**: GitHub environment variables can be supplied by
+ordinary code, a new manual dispatch has a new `GITHUB_RUN_ID`, and
+GitHub Actions jobs can be restarted. OCI retry tokens expire after
+approximately **24 hours**. Therefore no claim of exactly-once cloud
+creation is made by this candidate. A durable one-writer fence,
+old-credential revocation, fresh live inventory, explicit owner approval,
+and no automatic retry after ambiguous writes remain mandatory.
+
+PR CI installs the pinned OCI SDK on the **unprivileged PR test job only**.
+No OCI secret, protected GitHub Environment, worker implementation,
+scheduled launch, or live action is added.
