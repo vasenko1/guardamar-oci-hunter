@@ -95,3 +95,39 @@ jobs:
               assert hashlib.sha256(Path(path).read_bytes()).hexdigest() == digest, path
           print("HEAD_INVENTORY_OK: all exact PR-head tracked bytes match manifest.")
           PY
+
+  temporary-live-migration-preflight-GET:
+    # Diagnostic proof ONLY. Delete after one approved read-only observation.
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'feature/fence-v2-migration-one-shot-staging'
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Checkout candidate without persisting any credential
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Verify real immutable v1 ancestry and exact protected rulesets without POST
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: |
+          python -B - <<'PY'
+          import os
+          from automation.fence_migration_preview import preview
+          from automation.github_fence_store import GitHubHttpTransport
+          from tools.fence_v1_v2_one_shot import Api, verify_protection
+
+          api = Api(GitHubHttpTransport(os.environ["GH_TOKEN"]))
+          item = preview(api)
+          verify_protection(api, "a4b0ce37f909f59f88aa667ea470a1e85258d33c")
+          assert item.before_oid == "ed78b480980cdfd03841349ac0164d92c66a9add"
+          print("READ_ONLY_RULESET_PREFLIGHT_OK: exact known protected history and rules.")
+          PY
