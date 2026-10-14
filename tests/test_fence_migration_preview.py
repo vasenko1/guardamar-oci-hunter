@@ -126,7 +126,11 @@ class MigrationPreviewTests(unittest.TestCase):
             def wrapped(path, count=[0]):
                 if path == lookup:
                     count[0] += 1
-                    if target != "ref" or count[0] >= 3:
+                    # First winner GET belongs to read-only inspector.
+                    # Tamper only the *second* winner GET that checks ancestry.
+                    if (target == "genesis"
+                            or (target == "winner" and count[0] >= 2)
+                            or (target == "ref" and count[0] >= 3)):
                         return payload
                 return original_get(path)
             api.get = wrapped
