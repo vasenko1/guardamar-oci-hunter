@@ -38,6 +38,7 @@ jobs:
           automation/oci_sdk_models.py
           automation/durable_fence.py
           automation/fence_watermark_v2.py
+          automation/github_fence_readonly.py
           automation/github_fence_store.py
           automation/fence_rules_audit.py
           tests/test_github_fence_store.py
@@ -46,7 +47,19 @@ jobs:
           tests/test_oci_sdk_models.py
           tests/test_durable_fence.py
           tests/test_fence_watermark_v2.py
+          tests/test_github_fence_readonly.py
       - name: Run read-only candidate regression tests
         env:
           PYTHONDONTWRITEBYTECODE: "1"
         run: python -m unittest discover -s tests -v
+      - name: Live GET-only read of pinned protected ledger with read-only PR token
+        # This is an isolated PR experiment, not a standing network dependency
+        # of the production branch or other future pull requests.
+        if: >-
+          github.event.pull_request.head.repo.full_name == github.repository &&
+          github.event.pull_request.head.ref == 'research/readonly-fence-inspector'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: python -B -m automation.github_fence_readonly
+
