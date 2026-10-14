@@ -146,7 +146,10 @@ class SameRepoFenceRulesTests(unittest.TestCase):
             with self.subTest(value=str(bad)), self.assertRaises(
                 ProtectionBlocked
             ):
-                check(bad)
+                require_main_and_state_protected(
+                    bad, state_exists=True, main_sha="a" * 40,
+                    state_root_verified=True,
+                )
 
     def test_original_main_ruleset_is_only_one_and_never_enough(self):
         # Derived from the actual repository ruleset read on 2026-10-14:
