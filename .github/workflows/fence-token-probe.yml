@@ -1,0 +1,70 @@
+name: Protected OCI fence GITHUB_TOKEN CAS probe (one-shot)
+
+# Deliberately NOT callable by PR, schedule, push or a secondary repository.
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "Type APPEND-ONE-NOOP-COMMIT (changes branch HEAD, not ledger bytes)"
+        required: true
+        type: string
+
+permissions: {}
+
+concurrency:
+  group: protected-oci-fence-token-probe
+  cancel-in-progress: false
+
+jobs:
+  unprivileged-tests:
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      github.repository == 'vasenko1/guardamar-oci-hunter' &&
+      github.ref == 'refs/heads/main' &&
+      inputs.confirm == 'APPEND-ONE-NOOP-COMMIT'
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Checkout trusted main without persisting a token
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Run synthetic two-contender and fail-closed cases
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: python -m unittest discover -s tests -p test_fence_token_noop_probe.py -v
+
+  protected-ref-noop-cas:
+    needs: unprivileged-tests
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      github.repository == 'vasenko1/guardamar-oci-hunter' &&
+      github.ref == 'refs/heads/main' &&
+      github.run_attempt == 1 &&
+      inputs.confirm == 'APPEND-ONE-NOOP-COMMIT'
+    # Repository scoped; GitHub does NOT offer branch-scoped GITHUB_TOKEN.
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Checkout reviewed main source, never store the write token
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Verify the protected initial ledger and race two no-op CAS commits
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PROBE_CONFIRM: ${{ inputs.confirm }}
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: python -B tools/fence_token_noop_probe.py
