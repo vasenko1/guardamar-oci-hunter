@@ -9,7 +9,7 @@
     "docs/CUTOVER_RUNBOOK.md": "c918bdabb1e2af842f24fe729d08d0e6bbce3b1ba318fe38d46f14aed62afcc4",
     "tests/test_guardamar_capacity.py": "d96eb79f242e7933c6a962b187de9f50b911ed2ba830b56b86bc92130d6966f6",
     "tests/test_launch_contract.py": "c795cf845e617665e7156ffb7d9d12ff0e282e481c859702b697db696d1a8e1f",
-    "tests/test_launch_intent.py": "8454ce1e0b445b9d88ab5c6a65a68af3ca56d21ba879e7a85d4309d865d14713",
+    "tests/test_launch_intent.py": "51e3f0598b1cb0c03c187a1be76fd98760a949ed7ba40a29b31f8ec1ac7b2788",
     "tests/test_release_safety.py": "0c220e51662d0047178ed766019bfc3c5740f582b48456d3a37a404592e7cb25"
   },
   "mode": "audit-only"
