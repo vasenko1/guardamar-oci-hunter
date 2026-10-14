@@ -149,6 +149,8 @@ jobs:
                           len(r["bypass_actors"])
                           if type(r.get("bypass_actors")) is list else None
                       ),
+                      "updated_at_present": type(r.get("updated_at")) is str,
+                      "updated_at_value": r.get("updated_at"),
                       "current_actor_bypass": r.get("current_user_can_bypass"),
                       "conditions_exact": cond == {"include": [expected], "exclude": []},
                       "rule_types": sorted(x.get("type") for x in r.get("rules", [])),
