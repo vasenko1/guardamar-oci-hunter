@@ -57,9 +57,31 @@ class GitHubHttpTransport:
             raise TransportUnavailable("github_operation_disallowed")
         if path.startswith("//") or "://" in path or ".." in path:
             raise TransportUnavailable("github_operation_disallowed")
-        if not (path.startswith("/repos/" + REPO + "/")
-                or (method == "GET" and path == "/repos/" + REPO)
-                or path == "/graphql"):
+        base = "/repos/" + REPO
+        # A repository-wide contents:write token cannot be scoped to just
+        # the fence ref. Limit *this HTTP client* to the specific Git-data
+        # methods/paths used by the fence; protect main separately with rules.
+        if method == "GET":
+            allowed = (
+                path == base
+                or path == base + "/git/ref/heads/oci-fence-state"
+                or bool(re.fullmatch(
+                    re.escape(base) + r"/git/commits/[0-9a-f]{40}", path
+                ))
+                or bool(re.fullmatch(
+                    re.escape(base)
+                    + r"/contents/fence-record[.]json[?]ref=[0-9a-f]{40}",
+                    path,
+                ))
+            )
+        else:
+            allowed = path in {
+                "/graphql",
+                base + "/git/blobs",
+                base + "/git/trees",
+                base + "/git/commits",
+            }
+        if not allowed:
             raise TransportUnavailable("github_operation_disallowed")
         wire = (
             json.dumps(payload, separators=(",", ":")).encode("utf-8")
@@ -163,7 +185,9 @@ class GitHubCASStore:
             encoded = entry["content"]
             if not isinstance(encoded, str):
                 raise ValueError("bad content")
-            raw = base64.b64decode(encoded, validate=False)
+            # GitHub line-wraps Base64 content; whitespace removal is
+            # deliberate, but all non-Base64 characters must be rejected.
+            raw = base64.b64decode("".join(encoded.split()), validate=True)
             if len(raw) > 400_000:
                 raise ValueError("oversize")
             decode(raw)  # validate before any caller can ever trust the ledger
