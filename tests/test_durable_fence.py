@@ -240,6 +240,8 @@ class FenceOfflineTests(unittest.TestCase):
             b'{}',
             b'{"version":2,"phase":"OPEN","reason":"INITIAL","spent_run_ids":[],"active_run_id":null,"active_memory_gb":null}',
             b'{"version":1,"phase":"OPEN","reason":"INITIAL","spent_run_ids":[],"active_run_id":null,"active_memory_gb":null,"extra":1}',
+            b'{"version":1,"version":1,"phase":"OPEN","reason":"INITIAL","spent_run_ids":[],"active_run_id":null,"active_memory_gb":null}',
+            b'{"version":1,"phase":"HALTED","phase":"OPEN","reason":"INITIAL","spent_run_ids":[],"active_run_id":null,"active_memory_gb":null}',
             b'{"version":1,"phase":"OPEN","reason":"INITIAL","spent_run_ids":["123","123"],"active_run_id":null,"active_memory_gb":null}',
             b'{"version":1,"phase":"CLAIMED","reason":"INITIAL","spent_run_ids":[],"active_run_id":"111","active_memory_gb":6.0}',
             b'{"version":1,"phase":"HALTED","reason":"INITIAL","spent_run_ids":[],"active_run_id":null,"active_memory_gb":null}',
