@@ -3,7 +3,7 @@
     ".github/workflows/fence-token-probe.yml": "ab110b3917524ac43cc20f8a2f33e7a288980705f1d2182d999d35dcc53799ef",
     ".github/workflows/fence-v1-v2-migration.yml": "68e9a9297ceba14e8743cece2d1c534c2301f258238017ad55aeb3194e911706",
     ".github/workflows/guardamar-capacity.yml": "917b4e27cd0b438425058bea169f661718f4dd7ec448d2321b3f7ba5051429c8",
-    ".github/workflows/pr-tests.yml": "ac72d0470f9b8c7b634c683c061d3e478d1c1ddcb5d17474a60d2483a5111364",
+    ".github/workflows/pr-tests.yml": "585c3fd7de88f6546a89d4d3899ef91a2cc4f17eb9a69a645737cf20428eb917",
     "automation/__init__.py": "e61f6ba8d611986e59ba8690056225f1d604e0484066ae6dc87ca32497ac23c6",
     "automation/durable_fence.py": "b848b590043d5be2d743f765b2f172dcf9d452dc2e086ffde4f8828dd68faad2",
     "automation/fence_migration_preview.py": "a0023882c46867d5a7d8784f9c3ab88b1c4972a7691daaab380955b3805e4a7f",
