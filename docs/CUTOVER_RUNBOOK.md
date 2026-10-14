@@ -192,62 +192,94 @@ disabled and drained, old OCI writer key revoked, new dedicated OCI
 writer principal/Environment and explicit operator approval. The
 current audit-only `oci-readonly` must never receive write permission.
 
-## Stage 5 — concrete GitHub GraphQL CAS store (Draft PR #7, NOT CONNECTED)
+## Stage 5 — SAME-REPOSITORY GitHub GraphQL fence (Draft PR #7; NOT CONNECTED)
 
-The candidate `automation/github_fence_store.py` builds the actual GitHub
-REST Git-data + GraphQL `updateRefs` requests. It is deliberately not
-referenced by the audit workflow, is not given any GitHub write credential
-in PR CI, and has **no OCI SDK client or launch method**. Any failures,
-HTTP non-2xx, ambiguous GraphQL errors, incomplete acknowledgements,
-read timeouts, conflicts or partial Git object writes cause **failure
-without a write grant**; no automatic retries.
+**Revision of prior external-repository design:** no third GitHub repository is
+required for this candidate. `automation/github_fence_store.py` pins the
+already-existing `vasenko1/guardamar-oci-hunter`, using ONLY the separately
+protected, append-only `refs/heads/oci-fence-state` and
+`fence-record.json`. This ref has **NOT** been created or initialized;
+the source code and workflow on protected `main` are unaffected.
 
-GitHub's GraphQL `updateRefs` documents `beforeOid` exact-head comparison
-and atomic application. REST `PATCH git/refs` with `force:false` verifies
-only fast-forward ancestry; do NOT treat it as equivalent exact-head CAS.
-We exercised the linked GitHub connector's `update_ref(expected_sha=...)`
-against an **isolated disposable experiment branch** of the public source
-repository. Two contenders built sibling commits from the same old head;
-only one update was acknowledged, and a later stale attempt was rejected.
-The losing calls surfaced generic GraphQL errors, not a stable 409 reason.
-This is a **limited real GitHub probe**, not a proof of all network/read
-or crash semantics, and not an execution of the new HTTP code. Do not infer
-production read/write guarantees solely from this test.
+### Credentials and trust boundaries
 
-**Separation**: use a *future separate* GitHub state repository
-`vasenko1/guardamar-oci-fence` (NOT YET CREATED). The fixed state reference
-will be `refs/heads/oci-fence-state` with exactly
-`fence-record.json`. A standalone, tightly scoped future GitHub App/token
-may write **only the dedicated state repo**. Never give that token
-`contents:write` on `vasenko1/guardamar-oci-hunter`, and never expand
-PR permissions or add the token to the read-only `oci-readonly` Environment.
-Protect the state ref against force pushes, deletion, non-authorized writers,
-recreation, manual reset and bypass, including administrators as supported.
-The initial record must be provisioned only in a separately approved
-operation; there is intentionally no auto-init/auto-repair. The public
-experiment branch is not the real state ref and authorizes no OCI action.
+A future **trusted launcher** GitHub Actions job on reviewed, protected
+`main` can request its automatically provided short-lived `GITHUB_TOKEN`
+with **per-job `contents: write`**. No new PAT, GitHub App, GitHub account,
+repository or Oracle IAM user is required merely for this journal. All PR
+tests and existing read-only OCI audit jobs must remain `contents: read`,
+without any fence write access. Never expose the future launcher environment
+or token to `pull_request`, `pull_request_target`, user input, untrusted
+checkout or unreviewed external actions. Do not attach the write token to
+`oci-readonly`. **No such privileged job/token wiring is added here.**
 
-The backend's `read()` fetches a branch tip, then fetches the ledger by
-**immutable commit SHA**; `cas()` creates a blob, replacement tree and
-single-parent commit, then asks GraphQL `updateRefs` to advance the
-dedicated ref with exact `beforeOid`. Only an acknowledged mutation can
-return `True`. A successful Git commit object creation alone has **no
-effect** until the ref advances. Any ambiguous result blocks launches,
-even if the ref may already have advanced. No automatic rollback or
-retry of GitHub writes is allowed.
+**Important compromise:** `contents:write` is repository-wide, NOT
+restricted to `oci-fence-state` by GitHub's token scope. Source `main`
+must keep its existing active PR-required, strict-CI, non-force, non-delete
+ruleset. The **separate state-ref ruleset** must block deletion, force
+pushes and unwanted changes without disallowing its own single-parent
+forward-only CAS writes. A blanket "restrict updates" or PR-required
+rule on the state branch would also block the future Actions writer unless
+a separately reviewed narrow bypass is possible. No bypass is currently
+approved; test the effective rules with the real future `GITHUB_TOKEN`
+*before* enabling an OCI writer. Administrators/collaborators with write
+access remain a separate trust consideration; an append-only rule alone
+does not prove arbitrary trusted writers could not append a false OPEN
+state. If this residual risk cannot be accepted, switch to a dedicated
+state repo or another independently authorized storage service. Do **not**
+weaken source branch protection to make the ledger work.
 
-Before declaring this an operational backend: initialize/protect the
-separate state repository with owner approval, establish restricted API
-credentials, independently test a representative set of concurrent
-**real GraphQL API** requests using the exact production token/ref,
-verify immutable-object read consistency, app token revocation, access
-scope, crash recovery, API limits and scheduled cadence, and rehearse
-failure/retention behavior. The current PR verifies the HTTP request
-shapes and multi-writer transitions on an in-memory GitHub simulation.
-Neither credential provisioning nor these live validations are completed.
+### Exact CAS algorithm, unconnected
 
-Git history growth from repeated attempts, GitHub REST/GraphQL rate limits,
-and the bounded 10,000-run journal (~35 days at a 5-minute cadence) remain
-**blocking issues** for unattended operation. A safe journal rotation or
-long-term replacement mechanism must be designed and reviewed separately.
-The old Hunter continues running and creating VM attempts as before.
+The candidate uses GitHub REST Git-data GET/POST to read the state-ref tip,
+read `fence-record.json` from an immutable commit SHA, create one blob,
+tree and single-parent commit, then invokes GraphQL `updateRefs` with
+exact `beforeOid`, `force:false`, fixed ref and a verified repository
+`node_id` read from the fixed source repo. The HTTP client has an
+**allowlist of only the exact Git-data endpoints** needed; it cannot
+issue unrelated repository API calls through its request method. The
+state ref is not auto-created/repaired/rebased/reset/deleted by this code.
+
+A CAS success requires a complete GraphQL acknowledgement; missing responses,
+HTTP errors, conflicts, unexpected content or lost acknowledgements are
+**never retried**, and permit no OCI creation. There is no OCI SDK launch
+call or scheduled writer in the release candidate. The GitHub experiment
+`experiment/fence-cas-validation-20261014` remains a separate benign
+experimental branch, NOT this ledger.
+
+### Evidence and work still required
+
+GitHub's `updateRefs` documents atomic updates with exact `beforeOid`
+(REST `git/refs` update with `force:false` merely checks fast-forward).
+Previous real *connector* experiments on the isolated test branch saw
+one acknowledged winner among two and then among six simultaneous
+contenders. Losing writes gave generic GraphQL errors. These do **not**
+demonstrate the future in-workflow `GITHUB_TOKEN` has permission to
+perform this mutation under the future branch rules, nor test this exact
+Python HTTP transport against live GitHub. Fake REST/GraphQL tests cover
+competition, crash, malformed responses, rate-limit persistence and token
+path restriction.
+
+Next authorized tasks: deliberate initialization of an independent-root
+`oci-fence-state` ledger (not from `main` history); owner-configured
+state-ref ruleset with no unsafe bypass; test actual repo-scoped ephemeral
+`GITHUB_TOKEN` permission and real parallel GraphQL CAS operations on
+this ref, independent of OCI; verify emergency freeze/recovery and replay
+protection; examine git history growth, API limits, and the bounded
+10,000-run journal. At a five-minute cadence this journal permits around
+35 days of attempts; a durable history-preserving archival/rotation
+strategy remains a HARD BLOCKER before unattended production launch.
+
+Old OCI Hunter and Termux dispatcher remain sole writers, unchanged.
+New OCI read-only principal and `oci-readonly` Environment retain
+read-only authority. The eventual launch credential may come from a
+safely rotated key of the old restricted write-capable OCI principal after
+effective-IAM review, rather than an unnecessary third OCI user; separate
+protected `oci-launch` deployment environment and a verified
+break-before-make cutover with old credentials revoked are still mandatory.
+**None of that is authorized or implemented by this PR.**
+
+Documentation:
+- https://docs.github.com/en/actions/tutorials/authenticate-with-github_token
+- https://docs.github.com/en/graphql/reference/git
+- https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets
