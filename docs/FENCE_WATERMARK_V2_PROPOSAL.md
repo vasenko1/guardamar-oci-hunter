@@ -31,7 +31,10 @@ arriving late. A counter `claims_committed` is retained for auditing; its
 
 Canonical ASCII JSON only, exactly seven fields, maximum 1,024 bytes,
 decimal IDs with no leading zeros/signs and <=20 digits, nonnegative
-bounded integer claim counter. A CLAIMED state must have its active run
+bounded integer claim counter, which must never exceed the numeric
+highest spent run ID (an invariant for distinct positive increasing IDs).
+This local invariant does **not** prove genuine ancestry of previous commits.
+A CLAIMED state must have its active run
 exactly equal to the maximum. A HALTED state never grants another claim.
 A definite CAPACITY_MISS leaves OPEN but preserves the watermark and counter.
 All other results and OCI 429 halt globally. An unknown/lost CAS success
