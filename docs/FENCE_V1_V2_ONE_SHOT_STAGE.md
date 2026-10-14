@@ -76,6 +76,44 @@ but **has not been tested on GitHub with its prospective job token**.
 If any actual rights, rate limit or API-response mismatch occurs,
 the migration must stop and preserve all evidence rather than retry.
 
+## Restricted-token ruleset metadata: independently pinned proof
+
+The real read-only GitHub Actions probe initially failed closed with
+`REQUIRED_RULES_MISSING`. Detailed **public-flag-only** diagnostics
+established that the restricted ephemeral `GITHUB_TOKEN` can GET both
+rulesets, conditions, types, active enforcement and
+`current_user_can_bypass="never"`, **but omits `bypass_actors` entirely**.
+Missing is not the same as `[]`; weakening the ruleset audit without
+independent evidence would be unsafe.
+
+An independent GitHub connector read under the owner's account reported
+`bypass_actors=[]` for **both** exact repository rulesets. It also
+reported `updated_at` values which the restricted Actions token showed
+at identical UTC instants:
+
+- main ruleset 25036918:
+  `2026-10-13T22:56:43.499Z`
+- state ruleset 25080078:
+  `2026-10-14T13:52:14.030Z`
+
+The candidate now accepts an *absent* bypass field **only** if this
+exact independently-reviewed `updated_at` value still matches, the
+current job token explicitly reports `current_user_can_bypass="never"`,
+the complete exact rules/conditions source are unchanged, and the live
+state and main refs match approved hashes. Explicit null, malformed,
+nonempty bypass list, missing timestamps, updated policy or unknown
+third ruleset **all hard-stop before mutation**. Before and after CAS,
+all policy and timestamp checks are repeated. This relies on GitHub
+updating the ruleset's `updated_at` whenever its bypass list changes;
+a future provider change in that semantic requires re-review, not an
+automatic fallback. It is independent owner evidence, not proof that
+the restricted token itself can enumerate bypass principals.
+
+No privileged admin token or extra repository/IAM principal is stored
+or requested. The one-shot migration still requires explicit owner
+approval and a fresh separate preflight. **Do not infer permission to
+execute from matching timestamps or from green tests.**
+
 ## Explicit dependencies and unresolved production gates
 
 The known ledger ref currently has only the parentless genesis and one
