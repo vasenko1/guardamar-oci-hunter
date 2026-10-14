@@ -24,6 +24,15 @@ CURRENT_TIP = proposal.EXPECTED_TIP
 REF = read.REF
 MAIN_RULE_ID = 25036918
 STATE_RULE_ID = 25080078
+# These immutable ruleset versions were independently read via a
+# privileged GitHub account WITH bypass_actors=[] on 2026-10-14.
+# Restricted GITHUB_TOKEN GET omits bypass_actors entirely, but supplies
+# these exact updated_at values and current_user_can_bypass="never".
+# Any ruleset edit invalidates the timestamp and hard-stops the migration.
+PINNED_RULESET_UPDATED_UTC = {
+    MAIN_RULE_ID: "2026-10-13T22:56:43.499Z",
+    STATE_RULE_ID: "2026-10-14T13:52:14.030Z",
+}
 CONFIRM = "MIGRATE-APPROVED-V1-OPEN-TO-V2-ONCE"
 MESSAGE = "fence: one-time approved v1 OPEN/INITIAL to v2 schema transition"
 RUN_ID_PATTERN = re.compile(r"[1-9][0-9]{0,19}\Z")
@@ -108,7 +117,22 @@ def verify_protection(
         row = api.get(ROOT + "/rulesets/" + str(rule_id))
         require(type(row) is dict and type(row.get("id")) is int
                 and row["id"] == rule_id, "RULESET_ID_MISMATCH")
-        full.append(row)
+        require(row.get("updated_at") ==
+                PINNED_RULESET_UPDATED_UTC[rule_id],
+                "RULESET_VERSION_CHANGED")
+        # GitHub redacts bypass_actors for the restricted job token. We
+        # established that the owner-visible version with THIS updated_at
+        # has no bypass actors. An absent field is acceptable only for
+        # that pinned version AND a token with explicit 'never' capability.
+        # A present null, nonempty or malformed list is ALWAYS rejected.
+        if "bypass_actors" not in row:
+            require(row.get("current_user_can_bypass") == "never",
+                    "JOB_BYPASS_UNKNOWN")
+            full.append({**row, "bypass_actors": []})
+        else:
+            require(row["bypass_actors"] == [],
+                    "RULESET_BYPASS_ACTORS_PRESENT")
+            full.append(row)
     try:
         rules.require_main_and_state_protected(
             full, state_exists=True, main_sha=main_expected,
