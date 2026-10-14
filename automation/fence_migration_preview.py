@@ -48,24 +48,32 @@ def preview(api: OnlyGet) -> ProposedUpgrade:
                    "SOURCE_BYTES_NOT_INITIAL")
 
     winner = api.get(reader.ROOT + "/git/commits/" + EXPECTED_TIP)
+    reader.require(type(winner) is dict, "NOOP_ANCESTRY_INVALID")
+    parents = winner.get("parents")
+    tree = winner.get("tree")
     reader.require(winner.get("sha") == EXPECTED_TIP
                    and winner.get("message") == KNOWN_MESSAGE
-                   and winner.get("tree", {}).get("sha") ==
-                   reader.ORIGINAL_TREE
-                   and type(winner.get("parents")) is list
-                   and len(winner["parents"]) == 1
-                   and winner["parents"][0].get("sha") == EXPECTED_GENESIS,
+                   and type(tree) is dict
+                   and tree.get("sha") == reader.ORIGINAL_TREE
+                   and type(parents) is list and len(parents) == 1
+                   and type(parents[0]) is dict
+                   and parents[0].get("sha") == EXPECTED_GENESIS,
                    "NOOP_ANCESTRY_INVALID")
     genesis = api.get(reader.ROOT + "/git/commits/" + EXPECTED_GENESIS)
+    reader.require(type(genesis) is dict, "GENESIS_ANCESTRY_INVALID")
+    genesis_tree = genesis.get("tree")
     reader.require(genesis.get("sha") == EXPECTED_GENESIS
-                   and genesis.get("tree", {}).get("sha") ==
-                   reader.ORIGINAL_TREE
+                   and type(genesis_tree) is dict
+                   and genesis_tree.get("sha") == reader.ORIGINAL_TREE
                    and genesis.get("parents") == [],
                    "GENESIS_ANCESTRY_INVALID")
     latest = api.get(reader.ROOT + "/git/ref/heads/oci-fence-state")
+    reader.require(type(latest) is dict, "STATE_CHANGED_DURING_PREVIEW")
+    latest_object = latest.get("object")
     reader.require(latest.get("ref") == reader.REF
-                   and latest.get("object", {}).get("sha") == EXPECTED_TIP
-                   and latest.get("object", {}).get("type") == "commit",
+                   and type(latest_object) is dict
+                   and latest_object.get("sha") == EXPECTED_TIP
+                   and latest_object.get("type") == "commit",
                    "STATE_CHANGED_DURING_PREVIEW")
 
     candidate = v2.plan_v1_open_upgrade(original)
