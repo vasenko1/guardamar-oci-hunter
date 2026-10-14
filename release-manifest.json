@@ -14,7 +14,7 @@
     "automation/oci_sdk_models.py": "c15b9494a2498be9d1d6534605903c14f7c1767762dc1b338f11c20908a2b003",
     "docs/CUTOVER_RUNBOOK.md": "2270f0d724e9f577cdbe01239dbf88896763ce6210666ff3fabc49436cebeb1d",
     "tests/test_durable_fence.py": "0d60b079c9cf39177b7252b1e3cb5cf4c09853956bbb0d29d65b8527736c526b",
-    "tests/test_fence_rules_audit.py": "8a21d3b62a7591cb2d5a2404b88a341a87918602ff3a81a383cefc98fcc71bb7",
+    "tests/test_fence_rules_audit.py": "4e93662691df50028b7e23589cdd9c2dc4ebcb35caa53a70d87557ca95c9447c",
     "tests/test_github_fence_store.py": "55944ea5915433e326ff5c2b319607d70e9cd17b17ad0a5401e3e678ad1587a1",
     "tests/test_guardamar_capacity.py": "d96eb79f242e7933c6a962b187de9f50b911ed2ba830b56b86bc92130d6966f6",
     "tests/test_launch_contract.py": "c795cf845e617665e7156ffb7d9d12ff0e282e481c859702b697db696d1a8e1f",
