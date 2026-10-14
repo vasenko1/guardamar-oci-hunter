@@ -36,8 +36,10 @@ jobs:
           automation/launch_state.py
           automation/oci_error_policy.py
           automation/oci_sdk_models.py
+          automation/durable_fence.py
           tests/test_guardamar_capacity.py
           tests/test_oci_sdk_models.py
+          tests/test_durable_fence.py
       - name: Run read-only candidate regression tests
         env:
           PYTHONDONTWRITEBYTECODE: "1"
