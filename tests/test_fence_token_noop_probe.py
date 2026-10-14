@@ -48,11 +48,13 @@ class FakeApi:
             if path == probe.API_ROOT + "/git/ref/heads/oci-fence-state":
                 return {"ref": probe.REF, "object": {"sha": self.head}}
             if path == probe.API_ROOT + "/git/commits/" + probe.ROOT:
-                return {"tree": {"sha": probe.ROOT_TREE}, "parents": []}
+                return {"sha": probe.ROOT, "message": "Initialize OCI fence ledger",
+                        "tree": {"sha": probe.ROOT_TREE}, "parents": []}
             if path.startswith(probe.API_ROOT + "/git/commits/"):
                 key = path.rsplit("/", 1)[-1]
                 if key in self.proposals:
-                    return {"tree": {"sha": probe.ROOT_TREE},
+                    return {"sha": key, "message": self.proposals[key]["message"],
+                            "tree": {"sha": probe.ROOT_TREE},
                             "parents": [{"sha": probe.ROOT}]}
             if path == probe.API_ROOT + "/git/trees/" + probe.ROOT_TREE:
                 return {"truncated": False, "tree": [{
@@ -71,7 +73,9 @@ class FakeApi:
             key = ("a" if body["message"].endswith("/A)") else "b") * 40
             self.proposals[key] = dict(body)
             self.api_mutations += 1
-            return {"sha": key}
+            return {"sha": key, "message": body["message"],
+                    "tree": {"sha": probe.ROOT_TREE},
+                    "parents": [{"sha": probe.ROOT}]}
         if method == "POST" and path == "/graphql":
             with self.lock:
                 self.graphql_attempts += 1
@@ -158,6 +162,50 @@ class FenceProbeTests(unittest.TestCase):
                         probe.run_probe(api)
                 self.assertEqual(api.api_mutations, 0)
 
+
+    def test_actual_http_transport_allows_successful_commit_message(self):
+        # Unlike the in-memory store, this exercises Api.request's JSON
+        # response parser, reproducing GitHub's documented 200 and 201 body.
+        class Response(io.BytesIO):
+            def __init__(self, body, status):
+                super().__init__(json.dumps(body).encode("utf-8"))
+                self.status = status
+
+        class Opener:
+            def __init__(self, body, status=200):
+                self.body = body
+                self.status = status
+            def open(self, request, timeout=None):
+                return Response(self.body, self.status)
+
+        def fake_open(thing, path, body, status=200):
+            with patch.object(probe.urllib.request, "build_opener",
+                              return_value=Opener(body, status)):
+                return thing.request("POST" if status == 201 else "GET", path,
+                                     {"message": "fixture"} if status == 201 else None)
+
+        api = probe.Api("fake-token-1234567890")
+        expected = {"sha": probe.ROOT, "message": "Initialize OCI fence ledger",
+                    "tree": {"sha": probe.ROOT_TREE}, "parents": []}
+        self.assertEqual(
+            fake_open(api, probe.API_ROOT + "/git/commits/" + probe.ROOT, expected),
+            expected)
+        self.assertEqual(
+            fake_open(api, probe.API_ROOT + "/git/commits", expected, 201),
+            expected)
+        # A message-only error is NOT a commit (even if HTTP status is 200).
+        with self.assertRaisesRegex(probe.ProbeBlocked, "API_REJECTED"):
+            fake_open(api, probe.API_ROOT + "/git/commits/" + probe.ROOT,
+                      {"message": "Resource not accessible by integration"})
+        with self.assertRaisesRegex(probe.ProbeBlocked, "API_REJECTED"):
+            fake_open(api, probe.API_ROOT + "/git/ref/heads/main",
+                      {"message": "permission denied"})
+        with self.assertRaisesRegex(probe.ProbeBlocked, "API_REJECTED"):
+            fake_open(api, probe.API_ROOT + "/git/commits/" + probe.ROOT,
+                      {**expected, "errors": [{"message": "error"}]})
+        with self.assertRaisesRegex(probe.ProbeBlocked, "DISALLOWED_ENDPOINT"):
+            api.request("GET", probe.API_ROOT + "/actions/secrets")
+
     def test_url_confinement_blocks_outside_repository(self):
         transport = object.__new__(probe.Api)
         transport.token = "only-a-test-token-123456"
@@ -177,7 +225,8 @@ def _no_orphan_root(api):
     prior = api.request
     def response(method, path, body=None):
         if method == "GET" and path == probe.API_ROOT + "/git/commits/" + probe.ROOT:
-            return {"tree": {"sha": probe.ROOT_TREE},
+            return {"sha": probe.ROOT, "message": "unexpected parent",
+                    "tree": {"sha": probe.ROOT_TREE},
                     "parents": [{"sha": "f" * 40}]}
         return prior(method, path, body)
     return response

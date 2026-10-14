@@ -54,11 +54,31 @@ class Api:
         self.token = token
 
     def request(self, method: str, path: str, body: dict | None = None) -> dict:
-        # This script's token is allowed to access only the same repository.
-        require((path == "/graphql" and method == "POST") or
-                ((path == API_ROOT or path.startswith(API_ROOT + "/")) and
-                 (method == "GET" or
-                  (method == "POST" and path == API_ROOT + "/git/commits"))),
+        # Strictly pin the API to this repo, two source/state ref reads,
+        # immutable Git objects, the one ledger and one GraphQL CAS endpoint.
+        # A repository-wide write token is NOT a branch-scoped credential.
+        commit_object = (
+            method == "GET" and
+            re.fullmatch(re.escape(API_ROOT) + r"/git/commits/[0-9a-f]{40}",
+                         path) is not None
+        )
+        commit_create = method == "POST" and path == API_ROOT + "/git/commits"
+        ledger_read = (
+            method == "GET" and
+            re.fullmatch(re.escape(API_ROOT) +
+                         r"/contents/fence-record[.]json[?]ref=[0-9a-f]{40}",
+                         path) is not None
+        )
+        allowed_read = method == "GET" and (
+            path == API_ROOT or
+            path == API_ROOT + "/branches/oci-fence-state" or
+            path in {API_ROOT + "/git/ref/heads/main",
+                     API_ROOT + "/git/ref/heads/oci-fence-state",
+                     API_ROOT + "/git/trees/" + ROOT_TREE} or
+            commit_object or ledger_read
+        )
+        require(allowed_read or commit_create or
+                (method == "POST" and path == "/graphql"),
                 "DISALLOWED_ENDPOINT")
         require(".." not in path and "://" not in path and "//" not in path,
                 "DISALLOWED_ENDPOINT")
@@ -86,8 +106,22 @@ class Api:
                 raw = res.read(1_000_001)
             require(len(raw) <= 1_000_000, "API_OVERSIZE")
             obj = json.loads(raw.decode("utf-8"))
-            require(type(obj) is dict and "errors" not in obj and "message" not in obj,
+            require(type(obj) is dict and "errors" not in obj,
                     "API_REJECTED")
+            # GitHub's successful GET/POST Git commit objects contain
+            # 'message' as their actual commit message. In other endpoint
+            # families a top-level 'message' indicates an API error.
+            # Do not let an error-only {"message": "..."} pass as success.
+            if "message" in obj:
+                require((commit_object or commit_create) and
+                        isinstance(obj.get("message"), str) and
+                        isinstance(obj.get("sha"), str) and
+                        SHA.fullmatch(obj["sha"]) is not None and
+                        type(obj.get("tree")) is dict and
+                        isinstance(obj["tree"].get("sha"), str) and
+                        SHA.fullmatch(obj["tree"]["sha"]) is not None and
+                        type(obj.get("parents")) is list,
+                        "API_REJECTED")
             return obj
         except (urllib.error.URLError, OSError, ValueError, TimeoutError):
             # Never print GitHub error payloads or credential-derived headers.
@@ -101,7 +135,10 @@ def get_ref(api: Api, branch: str) -> str:
 
 
 def get_commit(api: Api, commit_sha: str) -> dict:
-    return api.request("GET", API_ROOT + "/git/commits/" + sha(commit_sha))
+    expected = sha(commit_sha)
+    result = api.request("GET", API_ROOT + "/git/commits/" + expected)
+    require(result.get("sha") == expected, "COMMIT_ID_MISMATCH")
+    return result
 
 
 def verify_tree_and_bytes(api: Api, commit_sha: str) -> None:
