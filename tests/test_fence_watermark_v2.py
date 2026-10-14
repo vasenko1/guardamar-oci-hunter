@@ -274,11 +274,15 @@ class WatermarkTests(unittest.TestCase):
         self.assertEqual(v2.decode(v2.encode(possible)), possible)
 
     def test_claim_counter_exhaustion_is_a_safe_halt(self):
-        obj = v2.WatermarkRecord("OPEN", "CAPACITY_MISS", "111",
+        # A reachable bound needs max ID >= number of distinct claims.
+        # Use a strictly higher admissible ID to reach the counter gate.
+        high = str(v2.MAX_CLAIM_COUNT)
+        obj = v2.WatermarkRecord("OPEN", "CAPACITY_MISS", high,
                                  v2.MAX_CLAIM_COUNT)
         cell = SharedStore(v2.encode(obj))
         with self.assertRaisesRegex(v2.FenceBlocked, "counter_exhausted"):
-            v2.claim(cell, env("112"), Preview("PREVIEW_ONLY", 6.0))
+            v2.claim(cell, env(str(v2.MAX_CLAIM_COUNT + 1)),
+                     Preview("PREVIEW_ONLY", 6.0))
         self.assertEqual(cell.calls, 0)
 
     def test_bad_untrusted_context_and_preview_have_no_cas(self):
