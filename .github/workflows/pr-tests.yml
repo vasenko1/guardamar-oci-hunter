@@ -127,7 +127,27 @@ jobs:
 
           api = Api(GitHubHttpTransport(os.environ["GH_TOKEN"]))
           item = preview(api)
-          verify_protection(api, "a4b0ce37f909f59f88aa667ea470a1e85258d33c")
+          try:
+              verify_protection(api, "a4b0ce37f909f59f88aa667ea470a1e85258d33c")
+          except Exception:
+              # Diagnostic booleans and public rule TYPES only; never echo
+              # token, raw HTTP body, rule content or private metadata.
+              for ident, name in [(25036918, "main"), (25080078, "state")]:
+                  r = api.get("/repos/vasenko1/guardamar-oci-hunter/rulesets/" + str(ident))
+                  expected = ("refs/heads/main" if name == "main"
+                              else "refs/heads/oci-fence-state")
+                  cond = r.get("conditions", {}).get("ref_name", {})
+                  print("RULESET_AUDIT_DIAG", name, {
+                      "target_ok": r.get("target") == "branch",
+                      "enforcement_ok": r.get("enforcement") == "active",
+                      "source_ok": r.get("source") == "vasenko1/guardamar-oci-hunter",
+                      "source_type_ok": r.get("source_type") == "Repository",
+                      "bypass_none": r.get("bypass_actors") == [],
+                      "current_actor_bypass": r.get("current_user_can_bypass"),
+                      "conditions_exact": cond == {"include": [expected], "exclude": []},
+                      "rule_types": sorted(x.get("type") for x in r.get("rules", [])),
+                  })
+              raise
           assert item.before_oid == "ed78b480980cdfd03841349ac0164d92c66a9add"
           print("READ_ONLY_RULESET_PREFLIGHT_OK: exact known protected history and rules.")
           PY
