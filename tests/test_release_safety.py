@@ -54,7 +54,7 @@ class ReleaseBoundaryTests(unittest.TestCase):
     def test_pr_ci_has_no_oci_environment_or_secret_access(self):
         content = (ROOT / PR_WORKFLOW).read_text()
         self.assertIn("  pull_request:", content)
-        self.assertIn("permissions:\\n  contents: read", content)
+        self.assertIn("permissions:\n  contents: read", content)
         self.assertIn("persist-credentials: false", content)
         self.assertNotIn("secrets.", content)
         self.assertNotIn("environment:", content)
