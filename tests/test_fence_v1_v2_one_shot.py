@@ -57,6 +57,7 @@ def ruleset(number, ref):
         "source": migrate.REPO, "source_type": "Repository",
         "target": "branch", "enforcement": "active",
         "bypass_actors": [], "current_user_can_bypass": "never",
+        "updated_at": migrate.PINNED_RULESET_UPDATED_UTC[number],
         "conditions": {"ref_name": {"include": [ref], "exclude": []}},
         "rules": [{"type": kind} for kind in typ],
     }
@@ -314,6 +315,37 @@ class MigrationTests(unittest.TestCase):
             migrate.run_migration(api, invocation())
         self.assertEqual(api.graphql_calls, 1)
         self.assertNotEqual(api.current, plan.EXPECTED_TIP)
+
+    def test_redacted_bypass_field_requires_pinned_owner_snapshot(self):
+        # Real contents:read GITHUB_TOKEN omits bypass_actors, unlike an
+        # owner-authorized read that showed [] on these precise timestamps.
+        api = MockGitHub()
+        for policy in api.rules.values():
+            del policy["bypass_actors"]
+        oid = migrate.run_migration(api, invocation())
+        self.assertEqual(api.current, oid)
+        self.assertEqual(api.graphql_calls, 1)
+
+        for failure in ("changed_stamp", "null_bypass",
+                        "bypass_allowed", "bad_own_token"):
+            fake = MockGitHub()
+            for item in fake.rules.values():
+                del item["bypass_actors"]
+            if failure == "changed_stamp":
+                fake.rules[migrate.MAIN_RULE_ID]["updated_at"] = (
+                    "2026-10-15T00:00:00Z")
+            elif failure == "null_bypass":
+                fake.rules[migrate.MAIN_RULE_ID]["bypass_actors"] = None
+            elif failure == "bypass_allowed":
+                fake.rules[migrate.STATE_RULE_ID]["bypass_actors"] = [
+                    {"actor_id": 123}]
+            else:
+                fake.rules[migrate.STATE_RULE_ID][
+                    "current_user_can_bypass"] = "always"
+            with self.subTest(failure=failure):
+                with self.assertRaises(migrate.MigrationBlocked):
+                    migrate.run_migration(fake, invocation())
+                self.assertEqual(fake.mutating_calls, [])
 
     def test_actual_http_ruleset_list_is_only_array_exception(self):
         """Unlike most REST results, GitHub GET /rulesets returns JSON array."""
