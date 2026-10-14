@@ -41,6 +41,8 @@ class LocalGitHub:
 
     def request(self, method, path, payload=None):
         prefix = "/repos/" + backend.REPO
+        if method == "GET" and path == prefix:
+            return {"full_name": backend.REPO, "node_id": "fake-graph-repo-id"}
         if method == "GET" and path == prefix + "/git/ref/heads/oci-fence-state":
             with self.lock:
                 return {"object": {"sha": self.tip}}
@@ -121,7 +123,7 @@ def env(run_id):
 class GitHubFenceBackendTests(unittest.TestCase):
     def test_read_exact_immutable_commit_and_content(self):
         fake = LocalGitHub()
-        store = backend.GitHubCASStore(fake, "fake-graph-repo-id")
+        store = backend.GitHubCASStore(fake)
         revision, data = store.read()
         self.assertEqual(revision, fake.tip)
         self.assertEqual(data, fence.initial_record_bytes())
@@ -129,7 +131,7 @@ class GitHubFenceBackendTests(unittest.TestCase):
 
     def test_one_winner_across_simultaneous_github_cas(self):
         fake = LocalGitHub()
-        store = backend.GitHubCASStore(fake, "fake-graph-repo-id")
+        store = backend.GitHubCASStore(fake)
         def contender(i):
             try:
                 fence.claim(store, env(str(100000 + i)), Preview("PREVIEW_ONLY", 6.0))
@@ -147,9 +149,9 @@ class GitHubFenceBackendTests(unittest.TestCase):
 
     def test_committed_claim_persists_across_new_store_instance(self):
         fake = LocalGitHub()
-        prior = backend.GitHubCASStore(fake, "fake-graph-repo-id")
+        prior = backend.GitHubCASStore(fake)
         fence.claim(prior, env("111"), Preview("PREVIEW_ONLY", 2.0))
-        subsequent = backend.GitHubCASStore(fake, "fake-graph-repo-id")
+        subsequent = backend.GitHubCASStore(fake)
         with self.assertRaises(fence.FenceBlocked):
             fence.claim(subsequent, env("222"), Preview("PREVIEW_ONLY", 6.0))
 
@@ -157,7 +159,7 @@ class GitHubFenceBackendTests(unittest.TestCase):
         fake = LocalGitHub()
         fake.ack_lost_after_commit = True
         old_head = fake.tip
-        store = backend.GitHubCASStore(fake, "fake-graph-repo-id")
+        store = backend.GitHubCASStore(fake)
         with self.assertRaises(fence.FenceBlocked):
             fence.claim(store, env("111"), Preview("PREVIEW_ONLY", 6.0))
         self.assertNotEqual(fake.tip, old_head)
@@ -169,7 +171,7 @@ class GitHubFenceBackendTests(unittest.TestCase):
         fake = LocalGitHub()
         fake.fail_graphql = True
         old_head = fake.tip
-        store = backend.GitHubCASStore(fake, "fake-graph-repo-id")
+        store = backend.GitHubCASStore(fake)
         with self.assertRaises(fence.FenceBlocked):
             fence.claim(store, env("111"), Preview("PREVIEW_ONLY", 6.0))
         self.assertEqual(fake.tip, old_head)
@@ -177,7 +179,7 @@ class GitHubFenceBackendTests(unittest.TestCase):
 
     def test_settle_capacity_miss_allows_only_distinct_new_run(self):
         fake = LocalGitHub()
-        store = backend.GitHubCASStore(fake, "fake-graph-repo-id")
+        store = backend.GitHubCASStore(fake)
         ticket = fence.claim(store, env("111"), Preview("PREVIEW_ONLY", 6.0))
         fence.settle(store, ticket, "CAPACITY_MISS")
         self.assertEqual(fence.decode(store.read()[1]).phase, "OPEN")
@@ -190,27 +192,40 @@ class GitHubFenceBackendTests(unittest.TestCase):
 
     def test_global_429_stop_persists_to_new_instance(self):
         fake = LocalGitHub()
-        store = backend.GitHubCASStore(fake, "fake-graph-repo-id")
+        store = backend.GitHubCASStore(fake)
         fence.stop_on_preflight_429(store)
-        fresh = backend.GitHubCASStore(fake, "fake-graph-repo-id")
+        fresh = backend.GitHubCASStore(fake)
         self.assertEqual(fence.decode(fresh.read()[1]).reason, "RATE_LIMITED")
         with self.assertRaises(fence.FenceBlocked):
             fence.claim(fresh, env("999"), Preview("PREVIEW_ONLY", 6.0))
 
     def test_malformed_or_missing_blob_never_allows_claim(self):
         fake = LocalGitHub()
-        store = backend.GitHubCASStore(fake, "fake-graph-repo-id")
+        store = backend.GitHubCASStore(fake)
         with fake.lock:
             tree, _ = fake.commits[fake.tip]
             fake.commits[fake.tip] = (tree, b'{"phase":"OPEN"}')
         with self.assertRaises(fence.FenceBlocked):
             fence.claim(store, env("111"), Preview("PREVIEW_ONLY", 6.0))
 
+    def test_graphql_target_resolved_only_from_fixed_repository(self):
+        class WrongRepo(LocalGitHub):
+            def request(self, method, path, payload=None):
+                if method == "GET" and path == "/repos/" + backend.REPO:
+                    return {"full_name": "attacker/other", "node_id": "bad-node"}
+                return super().request(method, path, payload)
+        wrong = WrongRepo()
+        store = backend.GitHubCASStore(wrong)
+        with self.assertRaises(fence.FenceBlocked):
+            fence.claim(store, env("111"), Preview("PREVIEW_ONLY", 6.0))
+        self.assertEqual(wrong.tip, "a" * 40)
+        self.assertEqual(wrong.graphql_updates, 0)
+
     def test_failure_does_not_leak_transport_or_key_material(self):
         class Broken:
             def request(self, method, path, payload=None):
                 raise ValueError("original OCI credential or GitHub access token")
-        store = backend.GitHubCASStore(Broken(), "fake-graph-repo-id")
+        store = backend.GitHubCASStore(Broken())
         with self.assertRaises(backend.TransportUnavailable) as ctx:
             store.read()
         self.assertNotIn("credential", str(ctx.exception))
