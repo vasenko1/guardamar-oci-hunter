@@ -211,6 +211,8 @@ class SdkModelAdapterTests(unittest.TestCase):
             (429, "OutOfHostCapacity", "Out of host capacity!", "RATE_LIMITED"),
             (500, "TooManyRequests", "Out of host capacity!", "RATE_LIMITED"),
             (500, "OutOfHostCapacity", "capacity", "CAPACITY_MISS"),
+            (401, "OutOfHostCapacity", "Out of host capacity!", "BLOCKED"),
+            (403, "NotAuthorized", "Out of host capacity!", "BLOCKED"),
             (400, "NotAuthorized", "denied", "BLOCKED"),
             (401, "NotAuthorizedOrNotFound", "sensitive", "BLOCKED"),
             (503, "InternalError", "private caller details", "AMBIGUOUS"),
