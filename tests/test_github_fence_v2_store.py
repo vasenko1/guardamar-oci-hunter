@@ -65,7 +65,7 @@ class GitFake:
         tree = "b" * 40
         self.blobs[blob] = raw
         self.trees[tree] = blob
-        self.commits[self.tip] = (tree, None, "initial v2 fixture")
+        self.commits[self.tip] = (tree, inspector.GENESIS, "initial v2 fixture")
 
     def request(self, method, path, data=None):
         self.requests.append((method, path))
