@@ -283,3 +283,65 @@ Documentation:
 - https://docs.github.com/en/actions/tutorials/authenticate-with-github_token
 - https://docs.github.com/en/graphql/reference/git
 - https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets
+
+## Stage 6 — protected same-repo state ref readiness (no new infrastructure)
+
+GitHub readback at 2026-10-14 confirmed **only one active ruleset** in
+`vasenko1/guardamar-oci-hunter`: `Protect main - OCI Hunter` ID
+`25036918` targets exactly `refs/heads/main`, has zero bypass actors,
+and requires PR, strict `public-audit-tests`, no deletion and no
+non-fast-forward. **`oci-fence-state` does not exist** and no ruleset
+targets it. This is a hard blocker, not a reason to disable protection.
+
+The candidate `automation/fence_rules_audit.py` is deliberately
+**pure-data offline policy validation**, covered by credentialless PR CI.
+It requires evidence of exactly two active, repository-owned exact-ref
+rulesets, each with no bypass: unchanged strict main; separate state
+branch with deletion and non-fast-forward restriction. It rejects missing
+state, wildcard/extra rulesets, absent independent-root verification,
+dangerous bypass actors, and requirements that would prevent an automatic
+CAS update of the state ref. **This function is not yet wired to the
+HTTP backend or a privileged job, and its passing tests are not proof
+that the GitHub rules or runtime token have been configured.**
+
+### Required one-time operator setup, in safe order
+
+1. Using the repo owner's GitHub UI **Settings → Rules → Rulesets**,
+   create a branch ruleset `Protect OCI fence state` on exactly
+   `refs/heads/oci-fence-state`, enforcement **Active**, with **no bypass
+   actors**. Enable **Restrict deletions** and **Block force pushes**
+   (optionally **Require linear history**). Do **not** enable **Require a
+   pull request**, required status checks, restrict updates or restrict
+   creations for this state ref: these would prevent the automatic
+   append-only CAS writer and introduce unsafe bypass pressure. Do NOT
+   change or weaken `Protect main - OCI Hunter`.
+2. Independently create a **single-parentless orphan root commit** in
+   the same repository with exactly one file `fence-record.json`
+   containing the canonical `initial_record_bytes()` representation.
+   Push that root to new `oci-fence-state` after the ruleset is active.
+   An ordinary "Create branch from main" operation is **not** equivalent:
+   it inherits source files/history and fails the required independent
+   root check. Do not store signing keys, OCI IDs, passwords or any
+   source tree on this ref. The current connector cannot create a
+   root commit (its create_commit wrapper requires a parent), and it
+   cannot administer repo rulesets; these actions require owner UI/local
+   Git or a separately authorized operation. **Not done yet.**
+3. Verify branch is protected; root commit has zero parents and exactly
+   the ledger file; main rules and `main` SHA unchanged. Pin exact
+   approved genesis identity in a subsequent reviewed proposal.
+4. Only with separately approved, **unprivileged to OCI** protected-main
+   validation code: obtain the job-scoped `GITHUB_TOKEN` with only
+   `contents:write`; check actual GraphQL CAS with stale OID and two
+   simultaneous harmless claims on the state ref and prove main
+   restrictions still work. Complete no-credential PR and manual audit
+   jobs must remain contents:read. Such a write-capable job does **not**
+   exist at this stage.
+5. Later, before any actual cloud creation, independently approve a
+   distinct `oci-launch` Environment and minimal effective OCI write
+   policy, a durable history-preserving journal capacity strategy,
+   and break-before-make handoff from the sole existing Termux/old
+   GitHub hunter.
+
+GitHub admin rights are necessary to create/update branch rulesets; the
+available GitHub connector is unable to do so. Never create an
+unprotected state ref as a workaround or relax main rules.
