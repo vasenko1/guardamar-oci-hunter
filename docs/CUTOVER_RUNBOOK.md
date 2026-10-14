@@ -191,3 +191,63 @@ The break-before-make cutover still requires old GitHub/Termux jobs
 disabled and drained, old OCI writer key revoked, new dedicated OCI
 writer principal/Environment and explicit operator approval. The
 current audit-only `oci-readonly` must never receive write permission.
+
+## Stage 5 — concrete GitHub GraphQL CAS store (Draft PR #7, NOT CONNECTED)
+
+The candidate `automation/github_fence_store.py` builds the actual GitHub
+REST Git-data + GraphQL `updateRefs` requests. It is deliberately not
+referenced by the audit workflow, is not given any GitHub write credential
+in PR CI, and has **no OCI SDK client or launch method**. Any failures,
+HTTP non-2xx, ambiguous GraphQL errors, incomplete acknowledgements,
+read timeouts, conflicts or partial Git object writes cause **failure
+without a write grant**; no automatic retries.
+
+GitHub's GraphQL `updateRefs` documents `beforeOid` exact-head comparison
+and atomic application. REST `PATCH git/refs` with `force:false` verifies
+only fast-forward ancestry; do NOT treat it as equivalent exact-head CAS.
+We exercised the linked GitHub connector's `update_ref(expected_sha=...)`
+against an **isolated disposable experiment branch** of the public source
+repository. Two contenders built sibling commits from the same old head;
+only one update was acknowledged, and a later stale attempt was rejected.
+The losing calls surfaced generic GraphQL errors, not a stable 409 reason.
+This is a **limited real GitHub probe**, not a proof of all network/read
+or crash semantics, and not an execution of the new HTTP code. Do not infer
+production read/write guarantees solely from this test.
+
+**Separation**: use a *future separate* GitHub state repository
+`vasenko1/guardamar-oci-fence` (NOT YET CREATED). The fixed state reference
+will be `refs/heads/oci-fence-state` with exactly
+`fence-record.json`. A standalone, tightly scoped future GitHub App/token
+may write **only the dedicated state repo**. Never give that token
+`contents:write` on `vasenko1/guardamar-oci-hunter`, and never expand
+PR permissions or add the token to the read-only `oci-readonly` Environment.
+Protect the state ref against force pushes, deletion, non-authorized writers,
+recreation, manual reset and bypass, including administrators as supported.
+The initial record must be provisioned only in a separately approved
+operation; there is intentionally no auto-init/auto-repair. The public
+experiment branch is not the real state ref and authorizes no OCI action.
+
+The backend's `read()` fetches a branch tip, then fetches the ledger by
+**immutable commit SHA**; `cas()` creates a blob, replacement tree and
+single-parent commit, then asks GraphQL `updateRefs` to advance the
+dedicated ref with exact `beforeOid`. Only an acknowledged mutation can
+return `True`. A successful Git commit object creation alone has **no
+effect** until the ref advances. Any ambiguous result blocks launches,
+even if the ref may already have advanced. No automatic rollback or
+retry of GitHub writes is allowed.
+
+Before declaring this an operational backend: initialize/protect the
+separate state repository with owner approval, establish restricted API
+credentials, independently test a representative set of concurrent
+**real GraphQL API** requests using the exact production token/ref,
+verify immutable-object read consistency, app token revocation, access
+scope, crash recovery, API limits and scheduled cadence, and rehearse
+failure/retention behavior. The current PR verifies the HTTP request
+shapes and multi-writer transitions on an in-memory GitHub simulation.
+Neither credential provisioning nor these live validations are completed.
+
+Git history growth from repeated attempts, GitHub REST/GraphQL rate limits,
+and the bounded 10,000-run journal (~35 days at a 5-minute cadence) remain
+**blocking issues** for unattended operation. A safe journal rotation or
+long-term replacement mechanism must be designed and reviewed separately.
+The old Hunter continues running and creating VM attempts as before.
