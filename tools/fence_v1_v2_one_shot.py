@@ -81,7 +81,9 @@ def validate_invocation(env: dict[str, str]) -> str:
     return sha(env.get("GITHUB_SHA"))
 
 
-def verify_protection(api: Api, main_expected: str) -> str:
+def verify_protection(
+    api: Api, main_expected: str, expected_state: str = CURRENT_TIP,
+) -> str:
     """Exact same-repository ruleset policy, not just protected=true."""
     repo = api.get(ROOT)
     require(type(repo) is dict and repo.get("full_name") == REPO
@@ -136,7 +138,7 @@ def verify_protection(api: Api, main_expected: str) -> str:
                     and check.get("context") == "public-audit-tests"
                     for check in parameters["required_status_checks"]),
             "MAIN_STATUS_POLICY_CHANGED")
-    require(ref(api, "oci-fence-state") == CURRENT_TIP,
+    require(ref(api, "oci-fence-state") == expected_state,
             "FENCE_HEAD_CHANGED")
     return repo["node_id"]
 
@@ -248,54 +250,9 @@ def run_migration(api: Api, env: dict[str, str]) -> str:
             "POST_CAS_MAIN_CHANGED")
     # Branch policy can change between checks; detect it rather than
     # pretending to undo an already committed update.
-    verify_protection_after(api, expected_main, next_oid)
+    verify_protection(api, expected_main, next_oid)
     return next_oid
 
-
-def verify_protection_after(api: Api, main_expected: str, next_oid: str) -> None:
-    # verify_protection expects genesis, so read full live rules again but
-    # logically allow the one authorized advancing commit in the state ref.
-    # A new pure read-only policy verifier can share the same exact static
-    # rules, with state ref parameterized but no write.
-    verify_rules_only(api, main_expected, next_oid)
-
-
-def verify_rules_only(api: Api, main_expected: str, expected_state: str) -> None:
-    """Postcondition: reread both exact rulesets and protected refs."""
-    for name in ("main", "oci-fence-state"):
-        branch = api.get(ROOT + "/branches/" + name)
-        require(type(branch) is dict and branch.get("name") == name
-                and branch.get("protected") is True,
-                "POST_CAS_POLICY_CHANGED")
-    ids = api.get(ROOT + "/rulesets")
-    require(type(ids) is list and len(ids) == 2
-            and sorted(x.get("id") for x in ids if type(x) is dict
-                       and type(x.get("id")) is int)
-                == sorted((MAIN_RULE_ID, STATE_RULE_ID)),
-            "POST_CAS_RULESET_CHANGED")
-    for number, target, required in [
-        (MAIN_RULE_ID, "refs/heads/main",
-         {"deletion", "non_fast_forward", "pull_request",
-          "required_status_checks"}),
-        (STATE_RULE_ID, REF,
-         {"deletion", "non_fast_forward", "required_linear_history"}),
-    ]:
-        row = api.get(ROOT + "/rulesets/" + str(number))
-        require(type(row) is dict and row.get("id") == number
-                and row.get("enforcement") == "active"
-                and row.get("source") == REPO
-                and row.get("source_type") == "Repository"
-                and row.get("bypass_actors") == []
-                and row.get("current_user_can_bypass") in ("never", None)
-                and row.get("conditions") == {
-                    "ref_name": {"exclude": [], "include": [target]}
-                }
-                and type(row.get("rules")) is list
-                and {r.get("type") for r in row["rules"] if type(r) is dict}
-                    == required, "POST_CAS_RULESET_CHANGED")
-    require(ref(api, "main") == main_expected and
-            ref(api, "oci-fence-state") == expected_state,
-            "POST_CAS_REF_CHANGED")
 
 
 def main() -> None:
