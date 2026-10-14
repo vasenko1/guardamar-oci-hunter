@@ -121,7 +121,28 @@ class GitHubHttpTransport:
         if type(result) is not dict:
             raise TransportUnavailable("github_reply_unusable")
         # Do not return raw GitHub error payloads: they may contain identifiers.
-        if "errors" in result or "message" in result:
+        # GitHub's successful Git commit GET/POST response has a top-level
+        # 'message' holding the commit subject. Do not misclassify it as an
+        # API error. Other endpoint messages, error-only payloads and GraphQL
+        # 'errors' must still fail closed.
+        is_commit_response = (
+            (method == "POST" and path == base + "/git/commits")
+            or (method == "GET" and bool(re.fullmatch(
+                re.escape(base) + r"/git/commits/[0-9a-f]{40}", path
+            )))
+        )
+        if "errors" in result:
+            raise TransportUnavailable("github_request_not_confirmed")
+        if "message" in result and not (
+            is_commit_response
+            and isinstance(result.get("message"), str)
+            and isinstance(result.get("sha"), str)
+            and SHA1_RE.fullmatch(result["sha"])
+            and type(result.get("tree")) is dict
+            and isinstance(result["tree"].get("sha"), str)
+            and SHA1_RE.fullmatch(result["tree"]["sha"])
+            and type(result.get("parents")) is list
+        ):
             raise TransportUnavailable("github_request_not_confirmed")
         return result
 
