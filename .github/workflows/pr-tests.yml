@@ -84,7 +84,7 @@ jobs:
           assert m.get("mode") == "audit-only"
           expected = set(m["files"]) | {"release-manifest.json"}
           data = subprocess.check_output(["git", "ls-files", "-z"])
-          present = {s.decode("utf-8") for s in data.split(b"\\0") if s}
+          present = {s.decode("utf-8") for s in data.split(bytes([0])) if s}
           assert present == expected, {
               "missing_from_head": sorted(expected - present),
               "unreviewed_head_files": sorted(present - expected),
