@@ -111,11 +111,19 @@ class GitHubCASStore:
     """
 
     transport: JsonTransport
-    repo_node_id: str
 
-    def __post_init__(self):
-        if not isinstance(self.repo_node_id, str) or not self.repo_node_id:
-            raise TransportUnavailable("github_repository_identity_missing")
+    def _verified_repository_id(self) -> str:
+        """Resolve GraphQL identity only from the fixed future state repo."""
+        try:
+            details = self.transport.request("GET", "/repos/" + REPO)
+            if not isinstance(details, dict) or details.get("full_name") != REPO:
+                raise ValueError("unexpected repository")
+            node_id = details.get("node_id")
+            if not isinstance(node_id, str) or not node_id:
+                raise ValueError("missing GraphQL repository identity")
+            return node_id
+        except Exception:
+            raise TransportUnavailable("github_repository_identity_unavailable") from None
 
     @staticmethod
     def _sha(value: Any) -> str:
@@ -202,7 +210,7 @@ class GitHubCASStore:
                 "query": _GRAPHQL,
                 "variables": {
                     "input": {
-                        "repositoryId": self.repo_node_id,
+                        "repositoryId": self._verified_repository_id(),
                         "clientMutationId": "oci-fence-no-retry",
                         "refUpdates": [{
                             "name": FENCE_REF,
