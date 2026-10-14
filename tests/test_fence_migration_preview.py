@@ -101,6 +101,39 @@ class MigrationPreviewTests(unittest.TestCase):
             with self.subTest(attr=attr), self.assertRaises(read.AuditRejected):
                 plan.preview(api)
 
+    def test_malformed_commit_fields_are_sanitized_not_leaked(self):
+        cases = [
+            ("winner", {"sha": plan.EXPECTED_TIP,
+                        "message": plan.KNOWN_MESSAGE,
+                        "tree": None, "parents": [{"sha": plan.EXPECTED_GENESIS}]}),
+            ("winner", {"sha": plan.EXPECTED_TIP,
+                        "message": plan.KNOWN_MESSAGE,
+                        "tree": {"sha": read.ORIGINAL_TREE},
+                        "parents": ["not-a-dict"]}),
+            ("genesis", {"sha": plan.EXPECTED_GENESIS,
+                         "tree": None, "parents": []}),
+            ("genesis", None),
+            ("ref", {"ref": read.REF, "object": None}),
+        ]
+        for target, payload in cases:
+            api = NoWriteAPI()
+            original_get = api.get
+            lookup = {
+                "winner": read.ROOT + "/git/commits/" + plan.EXPECTED_TIP,
+                "genesis": read.ROOT + "/git/commits/" + plan.EXPECTED_GENESIS,
+                "ref": read.ROOT + "/git/ref/heads/oci-fence-state",
+            }[target]
+            def wrapped(path, count=[0]):
+                if path == lookup:
+                    count[0] += 1
+                    if target != "ref" or count[0] >= 3:
+                        return payload
+                return original_get(path)
+            api.get = wrapped
+            with self.subTest(target=target, payload=payload):
+                with self.assertRaises(read.AuditRejected):
+                    plan.preview(api)
+
     def test_never_renders_a_write_or_external_api_call(self):
         import ast
         from pathlib import Path
