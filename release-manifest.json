@@ -1,9 +1,14 @@
 {
   "files": {
     ".github/workflows/guardamar-capacity.yml": "917b4e27cd0b438425058bea169f661718f4dd7ec448d2321b3f7ba5051429c8",
+    ".github/workflows/pr-tests.yml": "04848b395537d9dcc118828ea3f51c7dbcb55393604fbd9f974461b567513c91",
     "automation/__init__.py": "e61f6ba8d611986e59ba8690056225f1d604e0484066ae6dc87ca32497ac23c6",
-    "automation/guardamar_capacity.py": "af1928d8956c7e2a817a8d663b6cfa26f28d57bcc9fde21f7bd033e44c38322f",
-    "tests/test_guardamar_capacity.py": "d96eb79f242e7933c6a962b187de9f50b911ed2ba830b56b86bc92130d6966f6"
+    "automation/guardamar_capacity.py": "fe3d233591fbb5877d99abd96958c1657124324f17a561a43e6efd3d3a29c828",
+    "automation/launch_contract.py": "c3b5f4375cefcb94376fbf7f6b819709e345baa338981a0617dd7490afdf99c3",
+    "docs/CUTOVER_RUNBOOK.md": "1ce2f576ea2bd5cab56580236bee53582d0d639b52b82a95be3f6f182c48e285",
+    "tests/test_guardamar_capacity.py": "d96eb79f242e7933c6a962b187de9f50b911ed2ba830b56b86bc92130d6966f6",
+    "tests/test_launch_contract.py": "c795cf845e617665e7156ffb7d9d12ff0e282e481c859702b697db696d1a8e1f",
+    "tests/test_release_safety.py": "0c220e51662d0047178ed766019bfc3c5740f582b48456d3a37a404592e7cb25"
   },
   "mode": "audit-only"
 }
