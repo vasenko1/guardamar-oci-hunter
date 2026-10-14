@@ -33,7 +33,7 @@ class ReleaseBoundaryTests(unittest.TestCase):
             ["git", "ls-files", "-z"], cwd=ROOT, check=True,
             capture_output=True,
         )
-        tracked = {x.decode() for x in p.stdout.split(b"\\0") if x}
+        tracked = {x.decode() for x in p.stdout.split(bytes((0,))) if x}
         self.assertEqual(tracked, set(entries) | {"release-manifest.json"})
 
     def test_audit_workflow_is_main_only_and_never_scheduled(self):
