@@ -20,7 +20,7 @@
     "tests/test_durable_fence.py": "0d60b079c9cf39177b7252b1e3cb5cf4c09853956bbb0d29d65b8527736c526b",
     "tests/test_fence_rules_audit.py": "4e93662691df50028b7e23589cdd9c2dc4ebcb35caa53a70d87557ca95c9447c",
     "tests/test_fence_token_noop_probe.py": "7d4129549957149af9bfea610fd1e4da53fb92c88704a221f2e23840dfca80d0",
-    "tests/test_fence_watermark_v2.py": "c754b5c818f68a36bae6464112ee274d346c3deb42db5d8bb36c66cba213ab69",
+    "tests/test_fence_watermark_v2.py": "2fdc8e3c7a77d4339eb2c66ec0efc11724aa0f8986232b4ca9c62ec3c8f3c4ad",
     "tests/test_github_fence_store.py": "437a12962b435be2a8b301cee68543029dc1fabad9f6da20514dc94a67f252ad",
     "tests/test_guardamar_capacity.py": "d96eb79f242e7933c6a962b187de9f50b911ed2ba830b56b86bc92130d6966f6",
     "tests/test_launch_contract.py": "c795cf845e617665e7156ffb7d9d12ff0e282e481c859702b697db696d1a8e1f",
