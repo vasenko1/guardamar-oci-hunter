@@ -143,6 +143,12 @@ jobs:
                       "source_ok": r.get("source") == "vasenko1/guardamar-oci-hunter",
                       "source_type_ok": r.get("source_type") == "Repository",
                       "bypass_none": r.get("bypass_actors") == [],
+                      "bypass_field_present": "bypass_actors" in r,
+                      "bypass_value_type": type(r.get("bypass_actors")).__name__,
+                      "bypass_list_count": (
+                          len(r["bypass_actors"])
+                          if type(r.get("bypass_actors")) is list else None
+                      ),
                       "current_actor_bypass": r.get("current_user_can_bypass"),
                       "conditions_exact": cond == {"include": [expected], "exclude": []},
                       "rule_types": sorted(x.get("type") for x in r.get("rules", [])),
