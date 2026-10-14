@@ -265,6 +265,29 @@ class FenceOfflineTests(unittest.TestCase):
                 Preview("PREVIEW_ONLY", 6.0),
             )
 
+    def test_public_protocol_has_no_cloud_or_network_implementations(self):
+        import ast
+        import inspect
+        source = inspect.getsource(fence)
+        tree = ast.parse(source)
+        imported = []
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                imported.extend(x.name.split(".")[0] for x in node.names)
+            elif isinstance(node, ast.ImportFrom) and node.module:
+                imported.append(node.module.split(".")[0])
+        self.assertFalse(set(imported).intersection({
+            "oci", "requests", "urllib", "socket", "subprocess", "httpx",
+        }))
+        calls = {
+            node.attr for node in ast.walk(tree)
+            if isinstance(node, ast.Attribute)
+        }
+        self.assertFalse(calls.intersection({
+            "launch_instance", "create_compute_capacity_report",
+            "terminate_instance", "post", "put", "request",
+        }))
+
     def test_only_safe_ledger_metadata_is_serialized(self):
         cell = SharedCAS()
         old = fence.claim(cell, env(), Preview("PREVIEW_ONLY", 2.0))
