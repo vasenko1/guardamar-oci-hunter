@@ -255,7 +255,7 @@ class GitHubFenceBackendTests(unittest.TestCase):
                 result = super().request(method, path, payload)
                 if method == "GET" and "/contents/fence-record.json?ref=" in path:
                     enc = result["content"]
-                    result["content"] = "\\n".join(
+                    result["content"] = "\n".join(
                         enc[i:i+60] for i in range(0, len(enc), 60)
                     )
                 return result
