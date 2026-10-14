@@ -56,6 +56,7 @@ class GitHubHttpTransport:
         if path.startswith("//") or "://" in path or ".." in path:
             raise TransportUnavailable("github_operation_disallowed")
         if not (path.startswith("/repos/" + REPO + "/")
+                or (method == "GET" and path == "/repos/" + REPO)
                 or path == "/graphql"):
             raise TransportUnavailable("github_operation_disallowed")
         wire = (
