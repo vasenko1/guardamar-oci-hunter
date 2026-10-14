@@ -54,3 +54,34 @@ Official references:
 - https://docs.oracle.com/en-us/iaas/Content/Identity/policyreference/corepolicyreference_topic-Permissions_Required_for_Each_API_Operation.htm
 - https://docs.oracle.com/en-us/iaas/Content/Identity/policyreference/corepolicyreference_topic-Details_for_Verb__ResourceType_Combinations.htm
 - https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments
+
+## Further offline manifest gate — stacked Draft PR #4
+
+This additional candidate constructs an *in-memory launch intent only*. Its
+`automation.launch_intent` module does not import OCI and has no create API.
+It is not wired to any Actions job, and must remain absent from protected
+`main` until this PR passes review. This stage adds no IAM, GitHub secret,
+launch schedule, or changed Termux/Oracle behavior.
+
+The exact reviewed live selector values and legacy RSA SSH **public** key
+are verified against fixed SHA-256 digests. The values themselves are **not**
+in public source or release artifacts. The new expected selector name
+`OCI_SSH_PUBLIC_KEY` is a **future launcher-only** protected Environment
+value: do not add it to `oci-readonly`, and do not copy the old code's key
+material into public commits. An operator must independently verify the
+approved SSH authorized key and host-access plan before any real cutover.
+Any intentional resource/SSH-key change requires explicit digest update
+and code review; callers cannot provide their own allowlist.
+
+The offline intent asserts root compartment equals the OCI tenancy, fixed
+Madrid region resource IDs, protected `main` and expected public repository,
+a real decimal GitHub run ID, a `PREVIEW_ONLY` approved dry-run selection,
+fixed boot 50 GB, one A1 OCPU, approved memory (6 or 2 GB), IMDSv2,
+VNIC settings, plugin configuration and both legacy deduplication tags.
+Its stable per-run/per-profile UUID5 retry token does not authorize retries:
+the future live writer must still enforce one physical write and a
+break-before-make owner-approved cutover.
+
+This is **manifest parity only**, not safety parity for the full live
+state machine, including 429 detection, run draining, readiness observation
+and ambiguous OCI writes. Those remain separately gated.
