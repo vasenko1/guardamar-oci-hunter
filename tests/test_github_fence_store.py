@@ -109,7 +109,7 @@ class LocalGitHub:
 
 def env(run_id):
     return {
-        "GITHUB_REPOSITORY": backend.REPO,
+        "GITHUB_REPOSITORY": "vasenko1/guardamar-oci-hunter",
         "GITHUB_REF": "refs/heads/main",
         "GITHUB_RUN_ATTEMPT": "1",
         "GITHUB_REF_PROTECTED": "true",
