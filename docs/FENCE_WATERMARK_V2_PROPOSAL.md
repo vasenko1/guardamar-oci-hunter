@@ -74,6 +74,31 @@ telemetry, backup and an owner-reviewed operational policy. Do not assume
 that an append-only public Git branch provides unlimited free storage, and
 do not prune/rebase/force-push history to hide growth.
 
+### Documented GitHub hosting constraints (must be measured on the real cadence)
+
+GitHub's [repository limits](https://docs.github.com/en/repositories/creating-and-managing-repositories/repository-limits)
+recommend at most **10 GB on-disk .git** and a maximum of **6 pushes/minute**
+per repository for operational health; its
+[large-files guidance](https://docs.github.com/en/repositories/working-with-files/managing-large-files/about-large-files-on-github)
+suggests ideally under 1 GB, and strongly recommends under 5 GB.
+Our CAS is an API ref update, not a conventional `git push`; these numbers
+are **health guidance, not a measured or guaranteed budget** for this use.
+The [API rate limits](https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api)
+state **1,000 requests/hour per repository** for standard `GITHUB_TOKEN`
+and general secondary limits of **500 content-generating requests/hour**.
+The real CAS adapter makes multiple REST and GraphQL calls per accepted claim
+and settlement. Measure total repository consumption across all workflows,
+not only the successful write count; provider can reject requests earlier.
+A 403/429/unknown write acknowledgment must block progression and must
+never be worked around with immediate or unattended retry.
+
+Before allowing even a small live schedule, set conservative alert thresholds
+based on observed commit-history growth, compressed repository size, workflow
+runtime/queue overlap, REST/GraphQL request volume and 403/429 frequency.
+A growing repository or approaching limit must trigger a controlled safe
+outage and owner review, never automatic commit rewriting or new infrastructure
+without explicit approval.
+
 The main/state rulesets have no bypass and prevent non-fast-forward/deletion;
 neither rule alone prevents an authorized contents:write process from
 appending a malicious fabricated state. The future trusted workflow,
