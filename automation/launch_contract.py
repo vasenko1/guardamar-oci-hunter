@@ -57,6 +57,8 @@ def preview_candidate(
     host report and a nonzero or unspecified host count. 1 GB is probe-only.
     The status RESOURCE_GATES_CLEAR is never proof of physical capacity.
     """
+    if report_status == "RATE_LIMITED":
+        return Preview("RATE_LIMITED")
     try:
         initial = check_snapshot(first, memory_gb=PRIMARY_MEMORY_GB)
         if initial != "RESOURCE_GATES_CLEAR":
@@ -66,8 +68,6 @@ def preview_candidate(
             return Preview(second)
         if report_status not in KNOWN_REPORT_STATES:
             return Preview("RESOURCE_BLOCKED")
-        if report_status == "RATE_LIMITED":
-            return Preview("RATE_LIMITED")
         if not _valid_profiles(report_profiles):
             return Preview("RESOURCE_BLOCKED")
         memory = PRIMARY_MEMORY_GB
