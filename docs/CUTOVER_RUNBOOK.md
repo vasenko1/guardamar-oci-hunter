@@ -132,3 +132,56 @@ and no automatic retry after ambiguous writes remain mandatory.
 PR CI installs the pinned OCI SDK on the **unprivileged PR test job only**.
 No OCI secret, protected GitHub Environment, worker implementation,
 scheduled launch, or live action is added.
+
+## Stage 4 — write-ahead CAS fence protocol (offline only; Draft PR #6)
+
+`automation/durable_fence.py` introduces a **pure protocol and validator** for
+a future globally shared, durable, compare-and-swap (CAS) state record. The
+current code implements **neither** the storage backend nor any OCI request.
+It cannot, by itself, prevent a second real launch. Its public document
+contains only minimal nonsensitive run identifiers, approved memory profile
+and state; **no tenancy, resource IDs, token, public IP or SSH material**.
+
+The protocol is intentionally conservative:
+- Every new run must be `GITHUB_RUN_ATTEMPT=1`, approved manual dispatch
+  on protected `main`, with a never-before-spent numeric GitHub run ID.
+  This is defense in depth, **not authenticated authorization**.
+- An atomic, durable `OPEN -> CLAIMED` write must be acknowledged **before**
+  a potential future physical `LaunchInstance`; a commit timeout, conflict,
+  read error, crash, restart, or stale snapshot forbids the write.
+- A definitive OCI `OutOfHostCapacity` reply permits an atomically recorded
+  `CLAIMED -> OPEN(CAPACITY_MISS)` transition. Only a **different unused**
+  run ID can try again.
+- An accepted/ambiguous/error response or 429 turns the global record
+  `HALTED`. If finalization fails, it stays `CLAIMED`, which also blocks
+  new attempts. A 429 **before** a write also requires a sticky global halt.
+  No automatic reconciliation or restart is permitted after ambiguity.
+- Exhausted journal/maximum document size triggers a **safe outage**; no
+  silent rotation, truncation, overwrite, or recreation of the record.
+
+**Critical unresolved backend gate:** A real storage provider must support
+a *linearizable durable compare-and-swap* across concurrent GitHub workflow
+executions, with unambiguous confirmation of a successful commit, durable
+reads and restricted writers. Offline mocks test the protocol but **cannot
+prove any remote GitHub API's atomicity**. GitHub REST repository Contents
+API accepts a previous blob SHA and may return 409 Conflict, but this is
+not by itself a verified end-to-end globally shared, strongly consistent
+fence. Do not write fence state to protected `main` or loosen main's
+ruleset merely to obtain `contents:write`. If GitHub-backed control
+state is selected, specify a dedicated least-privilege state surface,
+authorization, retention strategy, single-writer owner and adversarial
+live CAS tests before connecting OCI create permissions. This PR contains
+**no live GitHub write implementation**.
+
+No new public schedule is authorized. The current protocol admits
+*manual protected-main first attempts* only; supporting scheduled
+dispatches requires a separate reviewed change, not weakening this gate
+without evidence.
+
+OCI's `opc_retry_token` has a roughly 24-hour validity window and is
+**not** a substitute for the durable claim. GitHub `concurrency` is
+scoped to a repository, not a lock shared with the original Hunter.
+The break-before-make cutover still requires old GitHub/Termux jobs
+disabled and drained, old OCI writer key revoked, new dedicated OCI
+writer principal/Environment and explicit operator approval. The
+current audit-only `oci-readonly` must never receive write permission.
