@@ -56,3 +56,40 @@ jobs:
         env:
           PYTHONDONTWRITEBYTECODE: "1"
         run: python -m unittest discover -s tests -v
+
+  source-head-inventory:
+    # The default pull_request checkout is GitHub's synthetic merge tree.
+    # Independently validate the actual PR HEAD to detect files that
+    # exist only in main while the candidate manifest already pins them.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Checkout exact PR source commit without persisted credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Assert standalone source HEAD fully matches SHA-256 allowlist
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+          import subprocess
+
+          m = json.loads(Path("release-manifest.json").read_text())
+          assert m.get("mode") == "audit-only"
+          expected = set(m["files"]) | {"release-manifest.json"}
+          data = subprocess.check_output(["git", "ls-files", "-z"])
+          present = {s.decode("utf-8") for s in data.split(b"\\0") if s}
+          assert present == expected, {
+              "missing_from_head": sorted(expected - present),
+              "unreviewed_head_files": sorted(present - expected),
+          }
+          for path, digest in m["files"].items():
+              assert hashlib.sha256(Path(path).read_bytes()).hexdigest() == digest, path
+          print("HEAD_INVENTORY_OK: all exact PR-head tracked bytes match manifest.")
+          PY
