@@ -22,14 +22,14 @@
     "docs/FENCE_READONLY_AUDIT.md": "30ca29dd6587d0cafd2c2a5b40ca17daeb6722e2ee46cc269845a8ed0a859bf3",
     "docs/FENCE_TOKEN_PROBE.md": "197d957e9c9ea8138188b9e990fc7e41aff60dbcc094eea8744e1cae80ff3836",
     "docs/FENCE_V1_TO_V2_PREVIEW.md": "ec7f2a22477758d8318dc50da19ff647abab723ac9a58d376783de399c274902",
-    "docs/FENCE_V1_V2_ONE_SHOT_STAGE.md": "3ba69285dc5bb6c2e7a363c4e38da7625d5b7c0160b1f461f436454708a18efb",
+    "docs/FENCE_V1_V2_ONE_SHOT_STAGE.md": "59bb034078d6f8bdd890e811435b4d49d7cc90ad5680e095b34a2372d0b4b40d",
     "docs/FENCE_V2_CAS_ADAPTER.md": "39e9c7b2c7f25847e34c7a2f7b880726b873ea0fa842fb3e2c171a6fa01c6501",
     "docs/FENCE_WATERMARK_V2_PROPOSAL.md": "8bac3bf9ecba38c03f7df2a6fb3ae9bc58216a35fbd76b5038b743df5138b695",
     "tests/test_durable_fence.py": "0d60b079c9cf39177b7252b1e3cb5cf4c09853956bbb0d29d65b8527736c526b",
     "tests/test_fence_migration_preview.py": "3be554970fd84c76b79adae35acefbb56db1753b35125559aa64eb6433f9fea4",
     "tests/test_fence_rules_audit.py": "4e93662691df50028b7e23589cdd9c2dc4ebcb35caa53a70d87557ca95c9447c",
     "tests/test_fence_token_noop_probe.py": "7d4129549957149af9bfea610fd1e4da53fb92c88704a221f2e23840dfca80d0",
-    "tests/test_fence_v1_v2_one_shot.py": "335e45d1f752f75ef1c79faee8199008dac4c9fe713f1114da5e42ceadeaad9e",
+    "tests/test_fence_v1_v2_one_shot.py": "9e9074c34b69e0ec4af59057a338ade213ef842547e74b36173075d321564cb6",
     "tests/test_fence_watermark_v2.py": "2fdc8e3c7a77d4339eb2c66ec0efc11724aa0f8986232b4ca9c62ec3c8f3c4ad",
     "tests/test_github_fence_readonly.py": "58731cfa6609ec4172aa31159d6df8a7b25863cafca585ec94e94c7a6542709b",
     "tests/test_github_fence_store.py": "437a12962b435be2a8b301cee68543029dc1fabad9f6da20514dc94a67f252ad",
@@ -41,7 +41,7 @@
     "tests/test_oci_sdk_models.py": "605d9621c1e1c96a11bed66bc76bac8e340816fe039754a0d70953c05c4c471a",
     "tests/test_release_safety.py": "0c220e51662d0047178ed766019bfc3c5740f582b48456d3a37a404592e7cb25",
     "tools/fence_token_noop_probe.py": "1331283fa3c07a21b5f4042eda91b38873e0fa13576af78aafb6593ab41b4e13",
-    "tools/fence_v1_v2_one_shot.py": "38eb71f8d006926fb0f7700e8cacbc88fe49d97b2ae172a9db3c996e9f4a5b1b"
+    "tools/fence_v1_v2_one_shot.py": "20374990ef15c2ab15723d388a5f829c23c987366b999e5fa35811ea109f643c"
   },
   "mode": "audit-only"
 }
