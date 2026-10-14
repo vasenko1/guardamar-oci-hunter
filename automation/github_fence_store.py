@@ -130,6 +130,17 @@ class GitHubHttpTransport:
             result = json.loads(content.decode("utf-8"))
         except (ValueError, UnicodeError):
             raise TransportUnavailable("github_reply_unusable") from None
+        # GitHub's documented GET /repos/{owner}/{repo}/rulesets is an
+        # ARRAY, unlike all other allowlisted endpoints. Keep this exception
+        # strictly path- and method-bound. The migration preflight separately
+        # validates exact expected IDs before trusting any ruleset.
+        if method == "GET" and path == base + "/rulesets":
+            if type(result) is not list or len(result) > 100:
+                raise TransportUnavailable("github_reply_unusable")
+            if any(type(item) is not dict or "errors" in item
+                   for item in result):
+                raise TransportUnavailable("github_reply_unusable")
+            return result
         if type(result) is not dict:
             raise TransportUnavailable("github_reply_unusable")
         # Do not return raw GitHub error payloads: they may contain identifiers.
