@@ -19,8 +19,8 @@ from typing import Mapping, Protocol
 
 from .launch_contract import PERMITTED_PROFILES_GB, Preview
 
-MAX_JOURNAL_SIZE = 100_000
-_MAX_BYTES = 6_000_000
+MAX_JOURNAL_SIZE = 10_000
+_MAX_BYTES = 400_000
 _PHASES = frozenset({"OPEN", "CLAIMED", "HALTED"})
 _REASONS = frozenset({
     "INITIAL", "CAPACITY_MISS", "RATE_LIMITED", "AMBIGUOUS",
@@ -137,12 +137,22 @@ def encode(record: FenceRecord) -> bytes:
     return data
 
 
+def _unique_pairs(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    """Reject duplicate JSON fields rather than accepting the last value."""
+    result: dict[str, object] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("duplicate field")
+        result[key] = value
+    return result
+
+
 def decode(data: bytes) -> FenceRecord:
     """Reject malformed, stale-schema, unrecognised or ambiguous state."""
     if type(data) is not bytes or not data or len(data) > _MAX_BYTES:
         raise FenceBlocked("invalid_fence_document")
     try:
-        obj = json.loads(data.decode("ascii"))
+        obj = json.loads(data.decode("ascii"), object_pairs_hook=_unique_pairs)
         if type(obj) is not dict or set(obj) != {
             "version", "phase", "reason", "spent_run_ids",
             "active_run_id", "active_memory_gb",
