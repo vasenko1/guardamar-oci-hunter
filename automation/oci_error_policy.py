@@ -19,10 +19,12 @@ def classify_oci_failure(exc: BaseException) -> str:
     # 'Out of host capacity'. Never retry a rate-limited call.
     if status == 429 or code == "toomanyrequests":
         return "RATE_LIMITED"
-    if "outofhostcapacity" in code or "out of host capacity" in message:
-        return "CAPACITY_MISS"
+    # Explicit 4xx denials (including IAM 401/403) must never be mistaken
+    # for a benign host-capacity miss because of provider message contents.
     if type(status) is int and 400 <= status < 500:
         return "BLOCKED"
+    if "outofhostcapacity" in code or "out of host capacity" in message:
+        return "CAPACITY_MISS"
     if isinstance(exc, (ValueError, TypeError, KeyError)):
         return "BLOCKED"
     return "AMBIGUOUS"
