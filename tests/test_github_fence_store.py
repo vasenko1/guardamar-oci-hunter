@@ -232,10 +232,48 @@ class GitHubFenceBackendTests(unittest.TestCase):
         self.assertNotIn("token", str(ctx.exception))
         self.assertIsNone(ctx.exception.__cause__)
 
+    def test_reuses_existing_repository_not_a_new_fence_repository(self):
+        self.assertEqual(backend.REPO, "vasenko1/guardamar-oci-hunter")
+        self.assertEqual(backend.FENCE_REF, "refs/heads/oci-fence-state")
+        self.assertEqual(backend.FENCE_PATH, "fence-record.json")
+
+    def test_corrupted_base64_read_is_never_treated_as_open(self):
+        class Corrupt(LocalGitHub):
+            def request(self, method, path, payload=None):
+                result = super().request(method, path, payload)
+                if method == "GET" and "/contents/fence-record.json?ref=" in path:
+                    result["content"] += "%%%"
+                return result
+
+        store = backend.GitHubCASStore(Corrupt())
+        with self.assertRaises(backend.TransportUnavailable):
+            store.read()
+
+    def test_linewrapped_github_base64_is_accepted(self):
+        class Wrapped(LocalGitHub):
+            def request(self, method, path, payload=None):
+                result = super().request(method, path, payload)
+                if method == "GET" and "/contents/fence-record.json?ref=" in path:
+                    enc = result["content"]
+                    result["content"] = "\\n".join(
+                        enc[i:i+60] for i in range(0, len(enc), 60)
+                    )
+                return result
+
+        store = backend.GitHubCASStore(Wrapped())
+        _, ledger = store.read()
+        self.assertEqual(ledger, fence.initial_record_bytes())
+
     def test_http_adapter_never_accepts_wrong_host_or_path(self):
         api = backend.GitHubHttpTransport("test-token-not-an-actual-secret")
-        for path in ("http://example.org", "//example.com", "/other-service",
-                     "/repos/another/repo/git/commits"):
+        for path in (
+            "http://example.org", "//example.com", "/other-service",
+            "/repos/another/repo/git/commits",
+            "/repos/" + backend.REPO + "/git/ref/heads/main",
+            "/repos/" + backend.REPO + "/actions/workflows",
+            "/repos/" + backend.REPO + "/contents/.github/workflows/pr-tests.yml",
+            "/repos/" + backend.REPO + "/git/commits/not-a-sha",
+        ):
             with self.subTest(path=path), self.assertRaises(
                 backend.TransportUnavailable
             ):
