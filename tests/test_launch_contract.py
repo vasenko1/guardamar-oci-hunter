@@ -61,6 +61,10 @@ class OfflineLaunchContractTests(unittest.TestCase):
     def test_429_hard_stop_before_any_profile_selection(self):
         self.assertEqual(choose(status="RATE_LIMITED"), Preview("RATE_LIMITED"))
 
+    def test_429_outcome_takes_precedence(self):
+        self.assertEqual(choose(status="RATE_LIMITED",
+                                first=snapshot(target_count=1)), Preview("RATE_LIMITED"))
+
     def test_both_safety_snapshots_must_be_clear(self):
         self.assertEqual(choose(first=snapshot(target_count=1)), Preview("TARGET_EXISTS"))
         self.assertEqual(choose(final=snapshot(target_count=2)), Preview("TARGET_EXISTS"))
