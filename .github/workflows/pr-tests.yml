@@ -52,14 +52,3 @@ jobs:
         env:
           PYTHONDONTWRITEBYTECODE: "1"
         run: python -m unittest discover -s tests -v
-      - name: Live GET-only read of pinned protected ledger with read-only PR token
-        # This is an isolated PR experiment, not a standing network dependency
-        # of the production branch or other future pull requests.
-        if: >-
-          github.event.pull_request.head.repo.full_name == github.repository &&
-          github.event.pull_request.head.ref == 'research/readonly-fence-inspector'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          PYTHONDONTWRITEBYTECODE: "1"
-        run: python -B -m automation.github_fence_readonly
-
