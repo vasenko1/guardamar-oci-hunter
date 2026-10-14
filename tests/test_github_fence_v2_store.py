@@ -326,7 +326,11 @@ class V2AdapterTests(unittest.TestCase):
                 setattr(fake, attribute, True)
             with self.subTest(attribute=attribute):
                 store = backend.GitHubV2CASStore(fake)
-                with self.assertRaises(old_backend.TransportUnavailable):
+                # The public v2 reducer deliberately sanitizes all storage
+                # failures into FenceBlocked, never propagating transport data.
+                with self.assertRaisesRegex(
+                    v2.FenceBlocked, "watermark_read_unavailable"
+                ):
                     v2.claim(store, env(101), Preview("PREVIEW_ONLY", 6.0))
                 self.assertEqual(fake.writes, 0)
 
