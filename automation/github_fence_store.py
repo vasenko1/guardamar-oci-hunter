@@ -1,9 +1,9 @@
 """GitHub exact-before-OID CAS backend; UNWIRED from all workflows.
 
 No OCI client or launch functionality exists in this module. Using this in
-production requires a separately approved dedicated state repository, a GitHub
-write principal scoped only to that repository, a protected state ref, an
-initialized ledger and live authorization/cutover review.
+production requires an explicitly reviewed protected state ref in this SAME
+repository, a trusted main-only Actions job granting its ephemeral GITHUB_TOKEN
+contents:write, an initialized ledger and owner-approved cutover review.
 GraphQL updateRefs(beforeOid=...) is the atomic server-side primitive.
 REST git update-reference with force=false is NOT an exact compare-and-swap.
 """
@@ -19,7 +19,7 @@ from typing import Any, Protocol
 
 from .durable_fence import MAX_JOURNAL_SIZE, FenceBlocked, decode
 
-REPO = "vasenko1/guardamar-oci-fence"
+REPO = "vasenko1/guardamar-oci-hunter"
 FENCE_REF = "refs/heads/oci-fence-state"
 FENCE_PATH = "fence-record.json"
 SHA1_RE = re.compile(r"[0-9a-f]{40}\Z")
@@ -41,8 +41,10 @@ class JsonTransport(Protocol):
 class GitHubHttpTransport:
     """Explicit-only HTTP transport; no credential in repr, logs or exceptions.
 
-    DO NOT instantiate from an OCI audit/PR workflow. It requires a separately
-    restricted token for a future protected state branch; it is not configured.
+    DO NOT instantiate from an OCI audit/PR workflow. Future use must be
+    limited to a separate protected-main launch job with per-job
+    contents:write, using its ephemeral repository-scoped GITHUB_TOKEN.
+    Such a job is NOT added here and must not share OCI credentials with tests.
     """
 
     access_token: str = field(repr=False)
@@ -106,15 +108,15 @@ class GitHubHttpTransport:
 class GitHubCASStore:
     """Storage adapter with zero automatic retries, using exact GraphQL CAS.
 
-    Before any call to claim() the user must have independently initialized
-    the state branch and its fence-record.json. This class cannot initialize,
-    repair, reset, prune or delete an existing record/ref.
+    Before any call to claim() the owner must independently initialize and
+    protect the separate oci-fence-state branch in this source repository.
+    This class cannot initialize, repair, reset, prune or delete a record/ref.
     """
 
     transport: JsonTransport
 
     def _verified_repository_id(self) -> str:
-        """Resolve GraphQL identity only from the fixed future state repo."""
+        """Resolve GraphQL identity only from the fixed source repository."""
         try:
             details = self.transport.request("GET", "/repos/" + REPO)
             if not isinstance(details, dict) or details.get("full_name") != REPO:
