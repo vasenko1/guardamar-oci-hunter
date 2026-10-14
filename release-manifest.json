@@ -27,7 +27,7 @@
     "tests/test_fence_watermark_v2.py": "2fdc8e3c7a77d4339eb2c66ec0efc11724aa0f8986232b4ca9c62ec3c8f3c4ad",
     "tests/test_github_fence_readonly.py": "58731cfa6609ec4172aa31159d6df8a7b25863cafca585ec94e94c7a6542709b",
     "tests/test_github_fence_store.py": "437a12962b435be2a8b301cee68543029dc1fabad9f6da20514dc94a67f252ad",
-    "tests/test_github_fence_v2_store.py": "090a86a0b3218672ff925ce30fc2e36e84965e250581385c34d0ba0226d4996c",
+    "tests/test_github_fence_v2_store.py": "154a71f98b125b0554f1be6a9bd01c7742f6b38c536079de8c9a2abcf58ca4f3",
     "tests/test_guardamar_capacity.py": "d96eb79f242e7933c6a962b187de9f50b911ed2ba830b56b86bc92130d6966f6",
     "tests/test_launch_contract.py": "c795cf845e617665e7156ffb7d9d12ff0e282e481c859702b697db696d1a8e1f",
     "tests/test_launch_intent.py": "51e3f0598b1cb0c03c187a1be76fd98760a949ed7ba40a29b31f8ec1ac7b2788",
