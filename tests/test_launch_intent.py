@@ -82,7 +82,7 @@ class PinnedLaunchIntentTests(unittest.TestCase):
             },
         }
         self.assertEqual(result.manifest, expected)
-        self.assertEqual(len(result.manifest["agent_config"]["plugins_config"]), 15)
+        self.assertEqual(len(result.manifest["agent_config"]["plugins_config"]), 14)
         self.assertNotIn(env["OCI_SSH_PUBLIC_KEY"], repr(result))
         self.assertNotIn(env["OCI_COMPARTMENT_OCID"], repr(result))
         self.assertEqual(result.memory_in_gbs, 6.0)
