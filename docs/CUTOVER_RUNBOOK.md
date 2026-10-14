@@ -158,6 +158,12 @@ The protocol is intentionally conservative:
   No automatic reconciliation or restart is permitted after ambiguity.
 - Exhausted journal/maximum document size triggers a **safe outage**; no
   silent rotation, truncation, overwrite, or recreation of the record.
+  The prototype caps the journal at 10,000 distinct runs and serialized state
+  at 400,000 bytes, comfortably below GitHub's normal small-file threshold.
+  At a 5-minute cadence, 10,000 attempts would be roughly 35 days; durable
+  compaction and retention are **not designed yet**. This short bound is an
+  operational blocker for unattended long-term deployment, not a reason
+  to bypass the safety gate.
 
 **Critical unresolved backend gate:** A real storage provider must support
 a *linearizable durable compare-and-swap* across concurrent GitHub workflow
