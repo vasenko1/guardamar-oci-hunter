@@ -16,7 +16,7 @@
     "automation/oci_sdk_models.py": "c15b9494a2498be9d1d6534605903c14f7c1767762dc1b338f11c20908a2b003",
     "docs/CUTOVER_RUNBOOK.md": "2270f0d724e9f577cdbe01239dbf88896763ce6210666ff3fabc49436cebeb1d",
     "docs/FENCE_TOKEN_PROBE.md": "197d957e9c9ea8138188b9e990fc7e41aff60dbcc094eea8744e1cae80ff3836",
-    "docs/FENCE_WATERMARK_V2_PROPOSAL.md": "df52e9fcffa87096c39088cddb32b987ffeb98159d84f5fac34b16c1df89dfd8",
+    "docs/FENCE_WATERMARK_V2_PROPOSAL.md": "09586f6924190cc4737186b9b0742821eb3746e535a39671f22a1f7e1a12b6fe",
     "tests/test_durable_fence.py": "0d60b079c9cf39177b7252b1e3cb5cf4c09853956bbb0d29d65b8527736c526b",
     "tests/test_fence_rules_audit.py": "4e93662691df50028b7e23589cdd9c2dc4ebcb35caa53a70d87557ca95c9447c",
     "tests/test_fence_token_noop_probe.py": "7d4129549957149af9bfea610fd1e4da53fb92c88704a221f2e23840dfca80d0",
