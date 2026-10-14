@@ -66,6 +66,14 @@ class GitHubHttpTransport:
                 path == base
                 or path == base + "/git/ref/heads/oci-fence-state"
                 or path == base + "/branches/oci-fence-state"
+                # GET-only, exact repo-scoped release safety assertions.
+                or path == base + "/git/ref/heads/main"
+                or path == base + "/branches/main"
+                or path == base + "/rulesets"
+                or path in {
+                    base + "/rulesets/25036918",
+                    base + "/rulesets/25080078",
+                }
                 or bool(re.fullmatch(
                     re.escape(base) + r"/git/trees/[0-9a-f]{40}", path
                 ))
