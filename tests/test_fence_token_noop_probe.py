@@ -67,8 +67,8 @@ class FakeApi:
             assert body["parents"] == [probe.ROOT]
             assert body["tree"] == probe.ROOT_TREE
             assert body["message"].startswith("test: fence GITHUB_TOKEN CAS no-op")
-            key = ("a" if "contender-does-not-exist" in body["message"] else
-                   ("a" if body["message"].endswith("/A)") else "b")) * 40
+            assert body["message"].endswith(("/A)", "/B)"))
+            key = ("a" if body["message"].endswith("/A)") else "b") * 40
             self.proposals[key] = dict(body)
             self.api_mutations += 1
             return {"sha": key}
