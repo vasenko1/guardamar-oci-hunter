@@ -134,8 +134,13 @@ class Inspection:
     blob: str
 
 
-def read(api: ReadOnlyHttp, expected_head: str | None = None) -> Inspection:
-    """Check immutable bytes and stable ref during read, never change ref."""
+def read_snapshot(api: ReadOnlyHttp, expected_head: str | None = None
+                  ) -> tuple[Inspection, bytes]:
+    """Verify read-only immutable content and return validated bytes.
+
+    A caller MUST NOT interpret this read as authorization to write; a
+    subsequent CAS still needs its exact original revision in beforeOid.
+    """
     if expected_head is not None:
         sha(expected_head)
     repo = api.get(ROOT)
@@ -193,8 +198,13 @@ def read(api: ReadOnlyHttp, expected_head: str | None = None) -> Inspection:
     require(digest == blob_sha, "LEDGER_BLOB_HASH_MISMATCH")
     version, record = decode_version(payload)
     require(head() == commit_sha, "STATE_MOVED_DURING_READ")
-    return Inspection(commit_sha, version, record.phase, record.reason,
-                      tree_sha, blob_sha)
+    return (Inspection(commit_sha, version, record.phase, record.reason,
+                       tree_sha, blob_sha), payload)
+
+
+def read(api: ReadOnlyHttp, expected_head: str | None = None) -> Inspection:
+    """Preserve original non-mutating inspection interface."""
+    return read_snapshot(api, expected_head)[0]
 
 
 def live_smoke_current() -> None:
