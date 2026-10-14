@@ -10,6 +10,8 @@ import base64
 import hashlib
 import json
 import threading
+from unittest.mock import patch
+import io
 import unittest
 from concurrent.futures import ThreadPoolExecutor
 
@@ -263,6 +265,48 @@ class GitHubFenceBackendTests(unittest.TestCase):
         store = backend.GitHubCASStore(Wrapped())
         _, ledger = store.read()
         self.assertEqual(ledger, fence.initial_record_bytes())
+
+    def test_real_http_response_commit_message_is_not_an_error(self):
+        # Regression for failed protected-token probe run 38605272029:
+        # GitHub returns 'message' on *successful* commit GET and POST.
+        class Response(io.BytesIO):
+            def __init__(self, obj, code=200):
+                super().__init__(json.dumps(obj).encode("utf-8"))
+                self.status = code
+
+        class Opener:
+            def __init__(self, obj, code):
+                self.obj, self.code = obj, code
+            def open(self, request, timeout=None):
+                return Response(self.obj, self.code)
+
+        def call(method, path, obj, code=200):
+            with patch.object(backend.urllib.request, "build_opener",
+                              return_value=Opener(obj, code)):
+                return api.request(method, path,
+                                   {"message": "unit test", "tree": "b" * 40,
+                                    "parents": ["a" * 40]}
+                                   if method == "POST" else None)
+
+        api = backend.GitHubHttpTransport("fake-test-token-not-secret")
+        path = "/repos/" + backend.REPO + "/git/commits"
+        commit = {"sha": "a" * 40, "message": "initialize test",
+                  "tree": {"sha": "b" * 40}, "parents": []}
+        self.assertEqual(call("GET", path + "/" + "a" * 40, commit), commit)
+        self.assertEqual(call("POST", path, commit, 201), commit)
+        for method, dest, payload, code in [
+            ("GET", path + "/" + "a" * 40, {"message": "permission denied"}, 200),
+            ("POST", path, {"message": "Resource not accessible"}, 201),
+            ("GET", path + "/" + "a" * 40,
+             {**commit, "errors": [{"message": "rejected"}]}, 200),
+            ("GET", "/repos/" + backend.REPO,
+             {"message": "not found"}, 200),
+            ("POST", "/graphql",
+             {"errors": [{"message": "beforeOid mismatch"}]}, 200),
+        ]:
+            with self.subTest(method=method, dest=dest):
+                with self.assertRaises(backend.TransportUnavailable):
+                    call(method, dest, payload, code)
 
     def test_http_adapter_never_accepts_wrong_host_or_path(self):
         api = backend.GitHubHttpTransport("test-token-not-an-actual-secret")
