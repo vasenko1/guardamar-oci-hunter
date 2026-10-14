@@ -68,6 +68,12 @@ def _validate(record: WatermarkRecord) -> None:
     if (high is not None and not _valid_run(high)
             or (record.claims_committed == 0) != (high is None)):
         raise FenceBlocked("invalid_watermark_highest_run")
+    # Distinct accepted positive decimal IDs are strictly increasing.
+    # After N successful claims the Nth highest ID cannot be less than N.
+    # This is a check of internal consistency, NOT proof that every earlier
+    # commit in the Git history is genuine or that GitHub run IDs are ordered.
+    if high is not None and record.claims_committed > int(high):
+        raise FenceBlocked("watermark_count_exceeds_highest_id")
     if record.phase == "OPEN":
         if (record.reason not in {"INITIAL", "CAPACITY_MISS"}
                 or record.active_run_id is not None
