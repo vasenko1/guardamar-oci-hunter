@@ -674,7 +674,8 @@ class CapacityAuditTests(unittest.TestCase):
         ).read_text(encoding="utf-8")
         # No new OCI writer while the original private-repository workflow
         # remains active. Enable only after audited break-before-make.
-        self.assertNotIn("oci_launch_candidate", workflow)
+        self.assertEqual(workflow.count("automation.oci_launch_candidate audit"), 1)
+        self.assertNotIn("automation.oci_launch_candidate launch", workflow)
         self.assertNotIn("automation.guardamar_capacity launch", workflow)
         self.assertNotIn("  schedule:", workflow)
         self.assertIn("automation.guardamar_capacity audit", workflow)
