@@ -913,6 +913,10 @@ def _emit_result(result: CapacityResult, env: Mapping[str, str]) -> None:
         with Path(summary_path).open("a", encoding="utf-8") as summary:
             summary.write("## OCI capacity result\n\n")
             summary.write(f"- Outcome: **{result.outcome}**\n")
+            summary.write(
+                f"- Shape: {SHAPE} ({OCPUS:g} OCPU / "
+                f"{result.memory_in_gbs or MEMORY_GBS:g} GB)\n"
+            )
             summary.write("- Resource identifiers withheld from public logs.\n")
 
 
