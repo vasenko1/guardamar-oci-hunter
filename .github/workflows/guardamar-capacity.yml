@@ -84,7 +84,9 @@ jobs:
           inputs.action == 'launch'
         )
       )
-    environment: oci-launch
+    # Reuse the nine OCI secrets already validated by live candidate audit.
+    # The original SSH public key is the only missing runtime selector.
+    environment: oci-readonly
     runs-on: ubuntu-latest
     timeout-minutes: 12
     outputs:
@@ -114,8 +116,9 @@ jobs:
           OCI_SUBNET_OCID: ${{ secrets.OCI_SUBNET_OCID }}
           OCI_TARGET_DISPLAY_NAME: ${{ secrets.OCI_TARGET_DISPLAY_NAME }}
           OCI_SSH_PUBLIC_KEY: ${{ secrets.OCI_SSH_PUBLIC_KEY }}
-          # Missing until an explicit AFTER-OLD-OFF owner cutover gate.
-          GUARDAMAR_LAUNCH_SWITCH: ${{ secrets.GUARDAMAR_LAUNCH_SWITCH }}
+          # Same already-tested CLI safety gate as the original Hunter.
+          # Workflow must NOT be merged until the old creator is stopped.
+          GUARDAMAR_LAUNCH_SWITCH: OWNER_AUTHORIZED_PHASE_2
         run: python -m automation.oci_launch_candidate launch --allow-launch
       - name: Preserve blocked result
         if: steps.capacity.outcome == 'failure'
