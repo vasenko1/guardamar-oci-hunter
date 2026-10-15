@@ -59,6 +59,59 @@ Do not commit values, insert them in workflow inputs, logs or a discussion.
 migration.** The original OCI IAM credentials may be moved, but running
 both old and new writers at once is forbidden even with separate tokens.
 
+## Prepared activation PR — **DO NOT MERGE WHILE OLD CREATOR IS LIVE**
+
+A separate Draft feature branch `feature/oci-break-before-make-activation`
+prepares the SAME existing public Actions workflow for a **single**
+periodic OCI writer. Until a separately authorized merge, the protected
+public `main` retains read-only/manual OCI audits and **no schedule**.
+On merge, GitHub's five-minute `schedule` will start automatically.
+That is why merging this PR is the final writer-activation action, not
+a harmless deployment step. Do not enable auto-merge.
+
+The future workflow has exactly one launch step and matches the original
+Termux dispatch JSON `{"action":"launch"}`, while preserving manual
+`mode=candidate` (no LaunchInstance). It skips reruns, requires protected
+`main`, uses a single repo-scoped concurrency group and disables its own
+schedule when OCI returns READY/BLOCKED/RATE_LIMITED/AMBIGUOUS. A protected
+new `oci-launch` GitHub Environment is the write-credential boundary.
+It must contain validated **writer-authorized** OCI credentials, all
+approved selectors, the **public** SSH key and an explicit switch
+`GUARDAMAR_LAUNCH_SWITCH=OWNER_AUTHORIZED_PHASE_2`. The already-tested
+`oci-readonly` environment is separate and should remain read-only;
+its nine secrets alone do **not** prove OCI IAM permission to launch.
+
+Environment secrets **cannot** be read back from GitHub. Reuse existing
+owner-held credential material for the original writer; never log or
+paste private keys to GitHub discussions/ChatGPT and never mint a second
+OCI writer IAM identity by default. If approved writer credentials cannot
+be securely recovered, stop and choose a separately reviewed approach.
+The temporary presence of a second set of credentials in `oci-launch`
+does not create a second writer without the actual workflow, but extra
+write access should last no longer than the cutover requires.
+
+**Before merging this Draft:** independently verify in GitHub that old
+`guardamar-status-bot` workflow is `disabled_manually` or inactive;
+that NO queued/in_progress/pending old runs remain, including any pending
+schedule/dispatch jobs; and that old manual dispatch is refused. Allow
+all in-flight original requests to settle. Ensure Termux's current
+cron points to the OLD repo and therefore skips when the old workflow is
+disabled. This is a short intentional check gap: do NOT leave the old
+enabled as insurance. GitHub concurrency is per repository and does NOT
+serialize old/new workflows across repositories.
+
+**Then, with owner approval:** merge this one PR only into the protected
+main, verify the new writer's single run, and retarget the Termux script
+to this existing public repository without touching the public OCI
+credentials on Android. If the public workflow fails, fix it while OLD
+remains disabled; to roll back, first disable the public workflow and
+wait for its jobs to finish before re-enabling the old one. Never
+re-enable both.
+
+Any old `ocr-fence-state` CAS v1→v2 migration is a different plan and
+is not needed for this single-writer migration. The protected orphan
+state branch is left exactly as it was.
+
 ## Cutover — separate future explicitly reviewed operation
 
 1. Independently verify the dormant public code through **offline tests**.
