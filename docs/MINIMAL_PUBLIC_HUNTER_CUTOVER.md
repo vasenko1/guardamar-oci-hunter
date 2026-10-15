@@ -70,7 +70,7 @@ That is why merging this PR is the final writer-activation action, not
 a harmless deployment step. Do not enable auto-merge.
 
 The future workflow has exactly one launch step and matches the original
-Termux dispatch JSON `{"action":"launch"}`, while preserving manual
+Termux action plus explicit mode: `{"action":"launch","mode":"tests"}`, while preserving manual
 `mode=candidate` (no LaunchInstance). It skips reruns, requires protected
 `main`, uses a single repo-scoped concurrency group and disables its own
 schedule when OCI returns READY/BLOCKED/RATE_LIMITED/AMBIGUOUS. A protected
