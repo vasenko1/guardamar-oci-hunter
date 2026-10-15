@@ -81,6 +81,15 @@ approved selectors, the **public** SSH key and an explicit switch
 `oci-readonly` environment is separate and should remain read-only;
 its nine secrets alone do **not** prove OCI IAM permission to launch.
 
+The staged writer now compares SHA-256 hashes of the approved
+original production tenancy/compartment, AD, image, subnet, target name
+and SSH public key against values supplied at runtime. Only the hashes
+are committed in the public OCI module. This prevents an accidentally
+copied yet syntactically valid selector from creating a *different* VM
+or losing SSH access. It rejects differences before OCI creation.
+If the original approved settings intentionally change later, review
+and update the pins separately; do not silently disable this check.
+
 Environment secrets **cannot** be read back from GitHub. Reuse existing
 owner-held credential material for the original writer; never log or
 paste private keys to GitHub discussions/ChatGPT and never mint a second
