@@ -26,7 +26,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Check Python module syntax
-        run: python -m py_compile automation/guardamar_capacity.py tests/test_guardamar_capacity.py
+        run: python -m py_compile automation/guardamar_capacity.py automation/oci_launch_candidate.py tests/test_guardamar_capacity.py tests/test_oci_launch_candidate.py
       - name: Run read-only candidate regression tests
         env:
           PYTHONDONTWRITEBYTECODE: "1"
