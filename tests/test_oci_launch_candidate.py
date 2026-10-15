@@ -1,3 +1,4 @@
+import hashlib
 import sys
 import tempfile
 import unittest
@@ -726,8 +727,15 @@ class CapacityAuditTests(unittest.TestCase):
             "OCI_SUBNET_OCID": "ocid1.subnet.oc1.eu-madrid-3.test",
             "OCI_TARGET_DISPLAY_NAME": capacity.DISPLAY_NAME,
         }
+        fixture_hashes = {
+            key: hashlib.sha256(env[key].encode("utf-8")).hexdigest()
+            for key in capacity.APPROVED_SELECTOR_SHA256 if key in env
+        }
         with (
             patch.dict(sys.modules, {"oci": fake_sdk}),
+            patch.object(capacity, "APPROVED_SELECTOR_SHA256", {
+                **capacity.APPROVED_SELECTOR_SHA256, **fixture_hashes,
+            }),
             patch.object(capacity, "COMPARTMENT_OCID", tenancy),
             patch.object(capacity, "AVAILABILITY_DOMAIN",
                          env["OCI_AVAILABILITY_DOMAIN"]),
@@ -742,6 +750,24 @@ class CapacityAuditTests(unittest.TestCase):
             ):
                 gateway.launch_instance("fake-retry-token")
             fake_sdk.core.ComputeClient.return_value.launch_instance.assert_not_called()
+            # A different, syntactically valid same-region OCI image must
+            # fail BEFORE constructing another OCI SDK client.
+            changed = dict(env)
+            changed["OCI_IMAGE_OCID"] = "ocid1.image.oc1.eu-madrid-3.other"
+            with patch.object(capacity, "IMAGE_OCID", changed["OCI_IMAGE_OCID"]):
+                with self.assertRaisesRegex(
+                    capacity.SafetyError, "differ from the approved"
+                ):
+                    capacity.OciGateway(changed)
+            changed = dict(env)
+            changed["OCI_TARGET_DISPLAY_NAME"] = "not-the-approved-target"
+            with patch.object(capacity, "DISPLAY_NAME",
+                              changed["OCI_TARGET_DISPLAY_NAME"]):
+                with self.assertRaisesRegex(
+                    capacity.SafetyError, "differ from the approved"
+                ):
+                    capacity.OciGateway(changed)
+            self.assertEqual(fake_sdk.core.ComputeClient.call_count, 1)
 
     def test_staged_runner_fails_before_oci_sdk_without_full_selectors(self):
         # The live audit job does not provide SSH public key or the candidate
