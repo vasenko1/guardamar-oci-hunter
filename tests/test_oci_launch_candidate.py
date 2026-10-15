@@ -686,13 +686,14 @@ class CapacityAuditTests(unittest.TestCase):
         self.assertEqual(workflow.count(
             "python -m automation.oci_launch_candidate audit"
         ), 1)
-        self.assertIn("environment: oci-launch", workflow)
-        self.assertIn("environment: oci-readonly", workflow)
+        # No extra environment, IAM principal or duplicated nine secrets.
+        self.assertEqual(workflow.count("environment: oci-readonly"), 2)
+        self.assertNotIn("oci-launch", workflow)
         self.assertIn("github.ref_protected == true", workflow)
         self.assertIn("github.run_attempt == 1", workflow)
         self.assertIn("inputs.action == 'launch'", workflow)
         self.assertIn("inputs.action != 'launch'", workflow)
-        self.assertIn("GUARDAMAR_LAUNCH_SWITCH: ${{ secrets.GUARDAMAR_LAUNCH_SWITCH }}", workflow)
+        self.assertIn("GUARDAMAR_LAUNCH_SWITCH: OWNER_AUTHORIZED_PHASE_2", workflow)
         self.assertIn("inputs.mode == 'candidate'", workflow)
         self.assertIn("  disable:", workflow)
         self.assertIn("gh api --method PUT", workflow)
@@ -701,8 +702,9 @@ class CapacityAuditTests(unittest.TestCase):
         self.assertIn("automation.guardamar_capacity audit", workflow)
         # No old read-only secret environment may be used as a writer.
         writer = workflow.split("\n  capacity:", 1)[-1].split("\n  disable:", 1)[0]
-        self.assertIn("environment: oci-launch", writer)
-        self.assertNotIn("environment: oci-readonly", writer)
+        self.assertIn("environment: oci-readonly", writer)
+        self.assertIn("OCI_SSH_PUBLIC_KEY:", writer)
+        self.assertIn("launch --allow-launch", writer)
 
     def test_existing_nine_secrets_allow_read_only_but_not_launch(self):
         # Real read-only environment deliberately has no SSH deployment key.
