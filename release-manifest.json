@@ -4,10 +4,10 @@
     ".github/workflows/pr-tests.yml": "f77d82f48c39cc4dd64af03bfb981b90bd836574e22ba98f491da540760d87a3",
     "automation/__init__.py": "e61f6ba8d611986e59ba8690056225f1d604e0484066ae6dc87ca32497ac23c6",
     "automation/guardamar_capacity.py": "af1928d8956c7e2a817a8d663b6cfa26f28d57bcc9fde21f7bd033e44c38322f",
-    "automation/oci_launch_candidate.py": "90c977dc5d46a67341f250bae7d172c33de064b63b302e2611f6d881884f6e61",
-    "docs/MINIMAL_PUBLIC_HUNTER_CUTOVER.md": "68e616799d21d63cb6ac17232a8adb468f8e58f2c869714c40c3a4ebbbfc8cf1",
+    "automation/oci_launch_candidate.py": "eb5f9b91155707ee475d9b4134f471b0cb7319eed036bf04b359f8315213adbf",
+    "docs/MINIMAL_PUBLIC_HUNTER_CUTOVER.md": "400284a4dacab6b536a722e5efb401d3e6e142c0786356b366c578fb449eb810",
     "tests/test_guardamar_capacity.py": "d96eb79f242e7933c6a962b187de9f50b911ed2ba830b56b86bc92130d6966f6",
-    "tests/test_oci_launch_candidate.py": "64dc395f3010b2db9d72013c9d4524ad144a9af1224f56f488fb8817132e17f8"
+    "tests/test_oci_launch_candidate.py": "7314246b200ed748f0a9290f4b26fdc259c5570547187c4e076c70405c3431f7"
   },
   "mode": "single-writer-capacity"
 }
