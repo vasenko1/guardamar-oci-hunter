@@ -337,7 +337,7 @@ class OciGateway:
                 not IMAGE_OCID.startswith("ocid1.image.oc1.eu-madrid-3.") or
                 not SUBNET_OCID.startswith("ocid1.subnet.oc1.eu-madrid-3.") or
                 not SSH_PUBLIC_KEY.startswith(("ssh-rsa ", "ssh-ed25519 ")) or
-                "\\n" in SSH_PUBLIC_KEY or
+                "\n" in SSH_PUBLIC_KEY or
                 len(SSH_PUBLIC_KEY) > 4096):
             raise SafetyError("OCI runtime selectors violate approved resource boundaries")
 
@@ -901,19 +901,19 @@ def _emit_result(result: CapacityResult, env: Mapping[str, str]) -> None:
     output_path = env.get("GITHUB_OUTPUT")
     if output_path:
         with Path(output_path).open("a", encoding="utf-8") as output:
-            output.write(f"outcome={result.outcome}\\n")
+            output.write(f"outcome={result.outcome}\n")
             output.write(
                 "disable_schedule="
                 + ("true" if result.disable_schedule else "false")
-                + "\\n"
+                + "\n"
             )
 
     summary_path = env.get("GITHUB_STEP_SUMMARY")
     if summary_path:
         with Path(summary_path).open("a", encoding="utf-8") as summary:
-            summary.write("## OCI capacity result\\n\\n")
-            summary.write(f"- Outcome: **{result.outcome}**\\n")
-            summary.write("- Resource identifiers withheld from public logs.\\n")
+            summary.write("## OCI capacity result\n\n")
+            summary.write(f"- Outcome: **{result.outcome}**\n")
+            summary.write("- Resource identifiers withheld from public logs.\n")
 
 
 def main(
