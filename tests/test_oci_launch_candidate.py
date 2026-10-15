@@ -680,6 +680,26 @@ class CapacityAuditTests(unittest.TestCase):
         self.assertIn("automation.guardamar_capacity audit", workflow)
         self.assertNotIn("pull_request:", workflow)
 
+    def test_staged_runner_fails_before_oci_sdk_without_full_selectors(self):
+        # The live audit job does not provide SSH public key or the candidate
+        # write-path runtime config; missing items must never reach OCI.
+        with self.assertRaises(capacity.SafetyError):
+            capacity.OciGateway({
+                "OCI_TENANCY_OCID": "fixture", "OCI_USER_OCID": "fixture",
+                "OCI_FINGERPRINT": "fixture", "OCI_PRIVATE_KEY": "fixture",
+            })
+
+    def test_public_candidate_contains_no_original_infrastructure_ids(self):
+        source = (
+            Path(__file__).parents[1] / "automation" / "oci_launch_candidate.py"
+        ).read_text(encoding="utf-8")
+        for marker in (
+            "aaaaaaaapdyqh", "urntbnbuaa", "nuiwwug7",
+            "AAAAB3NzaC1yc2", "ssh-key-2026-09-07",
+        ):
+            with self.subTest(marker=marker):
+                self.assertNotIn(marker, source)
+
     def test_public_outcome_redacts_oci_identifiers(self):
         import io
         import contextlib
