@@ -326,7 +326,6 @@ class OciGateway:
             ("OCI_IMAGE_OCID", IMAGE_OCID),
             ("OCI_SUBNET_OCID", SUBNET_OCID),
             ("OCI_TARGET_DISPLAY_NAME", DISPLAY_NAME),
-            ("OCI_SSH_PUBLIC_KEY", SSH_PUBLIC_KEY),
         )
         if any(not isinstance(val, str) or not val or
                val.startswith("UNCONFIGURED_") or
@@ -335,11 +334,12 @@ class OciGateway:
         if (COMPARTMENT_OCID != tenancy or
                 not AVAILABILITY_DOMAIN.endswith(":EU-MADRID-3-AD-1") or
                 not IMAGE_OCID.startswith("ocid1.image.oc1.eu-madrid-3.") or
-                not SUBNET_OCID.startswith("ocid1.subnet.oc1.eu-madrid-3.") or
-                not SSH_PUBLIC_KEY.startswith(("ssh-rsa ", "ssh-ed25519 ")) or
-                "\n" in SSH_PUBLIC_KEY or
-                len(SSH_PUBLIC_KEY) > 4096):
+                not SUBNET_OCID.startswith("ocid1.subnet.oc1.eu-madrid-3.")):
             raise SafetyError("OCI runtime selectors violate approved resource boundaries")
+
+        # OCI inventory needs nine existing secrets, not the deployment SSH key.
+        # The key is mandatory only in the separately authorized write path.
+        self._ssh_public_key = env.get("OCI_SSH_PUBLIC_KEY")
 
         import oci
 
@@ -539,6 +539,12 @@ class OciGateway:
         memory_in_gbs: float = MEMORY_GBS,
     ) -> str:
         """Submit exactly one SDK request with all automatic retries disabled."""
+
+        key = self._ssh_public_key
+        if (not isinstance(key, str) or key != SSH_PUBLIC_KEY or
+                not key.startswith(("ssh-rsa ", "ssh-ed25519 ")) or
+                "\n" in key or len(key) > 4096):
+            raise SafetyError("launch requires a valid configured SSH public key")
 
         oci = self._oci
         manifest = launch_manifest(memory_in_gbs)

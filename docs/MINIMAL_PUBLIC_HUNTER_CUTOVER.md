@@ -40,6 +40,11 @@ public Hunter repository*:
 `OCI_TENANCY_OCID`, `OCI_USER_OCID`, `OCI_FINGERPRINT`,
 `OCI_PRIVATE_KEY`.
 
+**The nine existing `oci-readonly` environment secrets are sufficient
+for the manual `mode=candidate` OCI audit. The SSH public key below is
+required only for a future separately authorized VM launch; do not add
+it merely to run the read-only check.**
+
 The runtime resource-selection secrets are:
 
 `OCI_COMPARTMENT_OCID`, `OCI_AVAILABILITY_DOMAIN`,

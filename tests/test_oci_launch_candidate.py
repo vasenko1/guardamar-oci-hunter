@@ -1,8 +1,9 @@
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 from automation import oci_launch_candidate as capacity
 
@@ -680,6 +681,46 @@ class CapacityAuditTests(unittest.TestCase):
         self.assertNotIn("  schedule:", workflow)
         self.assertIn("automation.guardamar_capacity audit", workflow)
         self.assertNotIn("pull_request:", workflow)
+
+    def test_existing_nine_secrets_allow_read_only_but_not_launch(self):
+        # Real read-only environment deliberately has no SSH deployment key.
+        fake_sdk = SimpleNamespace(
+            signer=SimpleNamespace(Signer=Mock(return_value="fake-signer")),
+            retry=SimpleNamespace(NoneRetryStrategy=Mock(return_value="no-retry")),
+            core=SimpleNamespace(
+                ComputeClient=Mock(return_value=Mock()),
+                VirtualNetworkClient=Mock(return_value=Mock()),
+            ),
+            limits=SimpleNamespace(LimitsClient=Mock(return_value=Mock())),
+        )
+        tenancy = "ocid1.tenancy.oc1..testonly"
+        env = {
+            "OCI_TENANCY_OCID": tenancy,
+            "OCI_USER_OCID": "ocid1.user.oc1..testonly",
+            "OCI_FINGERPRINT": "fake",
+            "OCI_PRIVATE_KEY": "fake",
+            "OCI_COMPARTMENT_OCID": tenancy,
+            "OCI_AVAILABILITY_DOMAIN": "TEST:EU-MADRID-3-AD-1",
+            "OCI_IMAGE_OCID": "ocid1.image.oc1.eu-madrid-3.test",
+            "OCI_SUBNET_OCID": "ocid1.subnet.oc1.eu-madrid-3.test",
+            "OCI_TARGET_DISPLAY_NAME": capacity.DISPLAY_NAME,
+        }
+        with (
+            patch.dict(sys.modules, {"oci": fake_sdk}),
+            patch.object(capacity, "COMPARTMENT_OCID", tenancy),
+            patch.object(capacity, "AVAILABILITY_DOMAIN",
+                         env["OCI_AVAILABILITY_DOMAIN"]),
+            patch.object(capacity, "IMAGE_OCID", env["OCI_IMAGE_OCID"]),
+            patch.object(capacity, "SUBNET_OCID", env["OCI_SUBNET_OCID"]),
+        ):
+            gateway = capacity.OciGateway(env)
+            self.assertIsNone(gateway._ssh_public_key)
+            self.assertEqual(fake_sdk.core.ComputeClient.call_count, 1)
+            with self.assertRaisesRegex(
+                capacity.SafetyError, "launch requires a valid configured SSH"
+            ):
+                gateway.launch_instance("fake-retry-token")
+            fake_sdk.core.ComputeClient.return_value.launch_instance.assert_not_called()
 
     def test_staged_runner_fails_before_oci_sdk_without_full_selectors(self):
         # The live audit job does not provide SSH public key or the candidate
