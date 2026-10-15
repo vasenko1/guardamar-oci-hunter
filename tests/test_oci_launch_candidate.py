@@ -699,7 +699,7 @@ class CapacityAuditTests(unittest.TestCase):
         self.assertNotIn("automation.guardamar_capacity launch", workflow)
         self.assertIn("automation.guardamar_capacity audit", workflow)
         # No old read-only secret environment may be used as a writer.
-        writer = workflow.split("\\n  capacity:", 1)[-1].split("\\n  disable:", 1)[0]
+        writer = workflow.split("\n  capacity:", 1)[-1].split("\n  disable:", 1)[0]
         self.assertIn("environment: oci-launch", writer)
         self.assertNotIn("environment: oci-readonly", writer)
 
