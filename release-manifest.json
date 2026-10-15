@@ -7,7 +7,7 @@
     "automation/oci_launch_candidate.py": "90c977dc5d46a67341f250bae7d172c33de064b63b302e2611f6d881884f6e61",
     "docs/MINIMAL_PUBLIC_HUNTER_CUTOVER.md": "76fe047a27463637a51cd822a74d1a9e6bb90aede6487094016af7950d5800fb",
     "tests/test_guardamar_capacity.py": "d96eb79f242e7933c6a962b187de9f50b911ed2ba830b56b86bc92130d6966f6",
-    "tests/test_oci_launch_candidate.py": "984d1b5effd5c5b697fe98d2eaea8f8c6f099494ec10b1b8c670b6a2fb7b3788"
+    "tests/test_oci_launch_candidate.py": "64dc395f3010b2db9d72013c9d4524ad144a9af1224f56f488fb8817132e17f8"
   },
   "mode": "single-writer-capacity"
 }
