@@ -23,8 +23,11 @@ public for a narrow OCI-only workflow, without any Telegram source.
   through Secrets and rejects missing selectors before OCI SDK actions.
 - Includes the existing OCI launch regression tests, plus public-log
   identifier redaction and "still not wired" checks.
-- Leaves the public existing `.github/workflows/guardamar-capacity.yml`
-  unchanged, **audit-only**, with no schedule and no launch job.
+- Extends the existing public `.github/workflows/guardamar-capacity.yml`
+  with an explicit manual **candidate** audit option, still **audit-only**:
+  no schedule, no launch job, and no OCI write workflow. Once the OCI
+  repository secrets are set, this provides a safe live read-only dry run
+  before touching the old Hunter.
 - Does NOT include Telegram bot source/history, a mutable Git database,
   a new GitHub repo, OCI IAM principal, user-managed state or a new scheduler.
 
@@ -53,10 +56,11 @@ both old and new writers at once is forbidden even with separate tokens.
 
 ## Cutover — separate future explicitly reviewed operation
 
-1. Independently verify the dormant new public code against original
-   source hashes and run **offline tests**. Configure repository secrets
-   but leave the public workflow audit-only. An OCI-free audit may be
-   explicitly run in the new repository after secrets are verified.
+1. Independently verify the dormant public code through **offline tests**.
+   Configure the listed Secrets, then manually dispatch the existing public
+   workflow with `mode=candidate`. This performs **READ-ONLY OCI audit** using
+   the actual migrated OCI SDK/preflight adapter; it cannot launch an
+   instance. Do not use `launch`, which is not a supported workflow input.
 2. Review a *separate* **public writer activation** workflow based on the
    existing proven source schedule `3-58/5 * * * *` and concurrency
    group with `cancel-in-progress:false`, exact main/ref checks, a
