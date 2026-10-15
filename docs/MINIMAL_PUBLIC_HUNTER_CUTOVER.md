@@ -108,7 +108,7 @@ remains disabled; to roll back, first disable the public workflow and
 wait for its jobs to finish before re-enabling the old one. Never
 re-enable both.
 
-Any old `ocr-fence-state` CAS v1→v2 migration is a different plan and
+Any old `oci-fence-state` CAS v1→v2 migration is a different plan and
 is not needed for this single-writer migration. The protected orphan
 state branch is left exactly as it was.
 
