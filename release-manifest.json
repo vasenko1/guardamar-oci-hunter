@@ -1,9 +1,13 @@
 {
   "files": {
-    ".github/workflows/guardamar-capacity.yml": "917b4e27cd0b438425058bea169f661718f4dd7ec448d2321b3f7ba5051429c8",
+    ".github/workflows/guardamar-capacity.yml": "b892750111125e65caa96eaa69ef75f5491ac34c8a58f8acc20ca56bdb1bd810",
+    ".github/workflows/pr-tests.yml": "f77d82f48c39cc4dd64af03bfb981b90bd836574e22ba98f491da540760d87a3",
     "automation/__init__.py": "e61f6ba8d611986e59ba8690056225f1d604e0484066ae6dc87ca32497ac23c6",
     "automation/guardamar_capacity.py": "af1928d8956c7e2a817a8d663b6cfa26f28d57bcc9fde21f7bd033e44c38322f",
-    "tests/test_guardamar_capacity.py": "d96eb79f242e7933c6a962b187de9f50b911ed2ba830b56b86bc92130d6966f6"
+    "automation/oci_launch_candidate.py": "605e8dab40d65b9567554a88c687aa51d511a988a6813085c57ff81a44c0688b",
+    "docs/MINIMAL_PUBLIC_HUNTER_CUTOVER.md": "e9ef8c5ca2bf774bafed8bb2252d80a78a2bdebf509ce42db985864e26c266a5",
+    "tests/test_guardamar_capacity.py": "d96eb79f242e7933c6a962b187de9f50b911ed2ba830b56b86bc92130d6966f6",
+    "tests/test_oci_launch_candidate.py": "50b842ef3339d4d31283980350b7b968b6cbbd328ab2158879085114f1e0d561"
   },
   "mode": "audit-only"
 }

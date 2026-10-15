@@ -10,6 +10,7 @@ on:
         options:
           - tests
           - audit
+          - candidate
 permissions:
   contents: read
 concurrency:
@@ -27,7 +28,7 @@ jobs:
       - run: python -m unittest discover -s tests -v
   audit:
     needs: tests
-    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.mode == 'audit'
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (inputs.mode == 'audit' || inputs.mode == 'candidate')
     environment: oci-readonly
     runs-on: ubuntu-latest
     timeout-minutes: 8
@@ -48,4 +49,11 @@ jobs:
           OCI_IMAGE_OCID: ${{ secrets.OCI_IMAGE_OCID }}
           OCI_SUBNET_OCID: ${{ secrets.OCI_SUBNET_OCID }}
           OCI_TARGET_DISPLAY_NAME: ${{ secrets.OCI_TARGET_DISPLAY_NAME }}
-        run: python -m automation.guardamar_capacity audit
+          OCI_SSH_PUBLIC_KEY: ${{ secrets.OCI_SSH_PUBLIC_KEY }}
+          SELECTED_AUDIT_MODE: ${{ inputs.mode }}
+        run: |
+          if [ "$SELECTED_AUDIT_MODE" = "candidate" ]; then
+            python -m automation.oci_launch_candidate audit
+          else
+            python -m automation.guardamar_capacity audit
+          fi
