@@ -1,3 +1,4 @@
+import hashlib
 import sys
 import tempfile
 import unittest
@@ -666,21 +667,44 @@ class CapacityAuditTests(unittest.TestCase):
             self.assertIn("1 OCPU / 2 GB", summary.read_text())
             self.assertNotIn(capacity.SSH_PUBLIC_KEY, summary.read_text())
 
-    def test_candidate_is_not_wired_into_live_actions_workflow(self):
+    def test_proposed_workflow_is_staged_for_break_before_make_only(self):
+        """The workflow lives ONLY on an unmerged Draft until old writer off."""
         workflow = (
-            Path(__file__).parents[1]
-            / ".github"
-            / "workflows"
+            Path(__file__).parents[1] / ".github" / "workflows"
             / "guardamar-capacity.yml"
         ).read_text(encoding="utf-8")
-        # No new OCI writer while the original private-repository workflow
-        # remains active. Enable only after audited break-before-make.
-        self.assertEqual(workflow.count("automation.oci_launch_candidate audit"), 1)
-        self.assertNotIn("automation.oci_launch_candidate launch", workflow)
+        self.assertIn('cron: "3-58/5 * * * *"', workflow)
+        self.assertIn("  schedule:", workflow)
+        self.assertIn("  workflow_dispatch:", workflow)
+        self.assertNotIn("  pull_request:", workflow)
+        self.assertNotIn("pull_request_target:", workflow)
+        self.assertIn("  group: guardamar-capacity-search", workflow)
+        self.assertIn("  cancel-in-progress: false", workflow)
+        self.assertEqual(workflow.count(
+            "python -m automation.oci_launch_candidate launch --allow-launch"
+        ), 1)
+        self.assertEqual(workflow.count(
+            "python -m automation.oci_launch_candidate audit"
+        ), 1)
+        # No extra environment, IAM principal or duplicated nine secrets.
+        self.assertEqual(workflow.count("environment: oci-readonly"), 2)
+        self.assertNotIn("oci-launch", workflow)
+        self.assertIn("github.ref_protected == true", workflow)
+        self.assertIn("github.run_attempt == 1", workflow)
+        self.assertIn("inputs.action == 'launch'", workflow)
+        self.assertIn("inputs.action != 'launch'", workflow)
+        self.assertIn("GUARDAMAR_LAUNCH_SWITCH: OWNER_AUTHORIZED_PHASE_2", workflow)
+        self.assertIn("inputs.mode == 'candidate'", workflow)
+        self.assertIn("  disable:", workflow)
+        self.assertIn("gh api --method PUT", workflow)
+        self.assertIn("needs.capacity.outputs.disable_schedule == 'true'", workflow)
         self.assertNotIn("automation.guardamar_capacity launch", workflow)
-        self.assertNotIn("  schedule:", workflow)
         self.assertIn("automation.guardamar_capacity audit", workflow)
-        self.assertNotIn("pull_request:", workflow)
+        # No old read-only secret environment may be used as a writer.
+        writer = workflow.split("\n  capacity:", 1)[-1].split("\n  disable:", 1)[0]
+        self.assertIn("environment: oci-readonly", writer)
+        self.assertIn("OCI_SSH_PUBLIC_KEY:", writer)
+        self.assertIn("launch --allow-launch", writer)
 
     def test_existing_nine_secrets_allow_read_only_but_not_launch(self):
         # Real read-only environment deliberately has no SSH deployment key.
@@ -705,8 +729,15 @@ class CapacityAuditTests(unittest.TestCase):
             "OCI_SUBNET_OCID": "ocid1.subnet.oc1.eu-madrid-3.test",
             "OCI_TARGET_DISPLAY_NAME": capacity.DISPLAY_NAME,
         }
+        fixture_hashes = {
+            key: hashlib.sha256(env[key].encode("utf-8")).hexdigest()
+            for key in capacity.APPROVED_SELECTOR_SHA256 if key in env
+        }
         with (
             patch.dict(sys.modules, {"oci": fake_sdk}),
+            patch.object(capacity, "APPROVED_SELECTOR_SHA256", {
+                **capacity.APPROVED_SELECTOR_SHA256, **fixture_hashes,
+            }),
             patch.object(capacity, "COMPARTMENT_OCID", tenancy),
             patch.object(capacity, "AVAILABILITY_DOMAIN",
                          env["OCI_AVAILABILITY_DOMAIN"]),
@@ -721,6 +752,24 @@ class CapacityAuditTests(unittest.TestCase):
             ):
                 gateway.launch_instance("fake-retry-token")
             fake_sdk.core.ComputeClient.return_value.launch_instance.assert_not_called()
+            # A different, syntactically valid same-region OCI image must
+            # fail BEFORE constructing another OCI SDK client.
+            changed = dict(env)
+            changed["OCI_IMAGE_OCID"] = "ocid1.image.oc1.eu-madrid-3.other"
+            with patch.object(capacity, "IMAGE_OCID", changed["OCI_IMAGE_OCID"]):
+                with self.assertRaisesRegex(
+                    capacity.SafetyError, "differ from the approved"
+                ):
+                    capacity.OciGateway(changed)
+            changed = dict(env)
+            changed["OCI_TARGET_DISPLAY_NAME"] = "not-the-approved-target"
+            with patch.object(capacity, "DISPLAY_NAME",
+                              changed["OCI_TARGET_DISPLAY_NAME"]):
+                with self.assertRaisesRegex(
+                    capacity.SafetyError, "differ from the approved"
+                ):
+                    capacity.OciGateway(changed)
+            self.assertEqual(fake_sdk.core.ComputeClient.call_count, 1)
 
     def test_staged_runner_fails_before_oci_sdk_without_full_selectors(self):
         # The live audit job does not provide SSH public key or the candidate
