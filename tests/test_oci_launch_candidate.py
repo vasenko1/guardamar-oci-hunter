@@ -665,19 +665,49 @@ class CapacityAuditTests(unittest.TestCase):
             self.assertIn("1 OCPU / 2 GB", summary.read_text())
             self.assertNotIn(capacity.SSH_PUBLIC_KEY, summary.read_text())
 
-    def test_workflow_has_one_launch_path_and_a_safe_manual_audit(self):
+    def test_candidate_is_not_wired_into_live_actions_workflow(self):
         workflow = (
             Path(__file__).parents[1]
             / ".github"
             / "workflows"
             / "guardamar-capacity.yml"
         ).read_text(encoding="utf-8")
-        self.assertEqual(workflow.count("automation.guardamar_capacity launch"), 1)
-        self.assertEqual(workflow.count("automation.guardamar_capacity audit"), 1)
-        self.assertIn('cron: "3-58/5 * * * *"', workflow)
-        self.assertIn("cancel-in-progress: false", workflow)
-        self.assertIn("GUARDAMAR_LAUNCH_SWITCH", workflow)
+        # No new OCI writer while the original private-repository workflow
+        # remains active. Enable only after audited break-before-make.
+        self.assertNotIn("oci_launch_candidate", workflow)
+        self.assertNotIn("automation.guardamar_capacity launch", workflow)
+        self.assertNotIn("  schedule:", workflow)
+        self.assertIn("automation.guardamar_capacity audit", workflow)
         self.assertNotIn("pull_request:", workflow)
+
+    def test_public_outcome_redacts_oci_identifiers(self):
+        import io
+        import contextlib
+        result = capacity.CapacityResult(
+            "READY", "completed", True,
+            "ocid1.instance.secret", "192.0.2.70",
+            report=capacity.AuditReport(
+                "eu-madrid-3", "SENSITIVE_AVAILABILITY_DOMAIN",
+                ("ocid1.instance.secret",), ("RUNNING",),
+                0.0, 0.0, 0.0, "Oracle Linux",
+                True, True, True, (),
+            ),
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "output"
+            summary = Path(tmp) / "summary"
+            text = io.StringIO()
+            with contextlib.redirect_stdout(text):
+                capacity._emit_result(
+                    result,
+                    {"GITHUB_OUTPUT": str(output), "GITHUB_STEP_SUMMARY": str(summary)},
+                )
+            result_text = text.getvalue() + output.read_text() + summary.read_text()
+            self.assertNotIn("ocid1.instance.secret", result_text)
+            self.assertNotIn("192.0.2.70", result_text)
+            self.assertNotIn("SENSITIVE_AVAILABILITY_DOMAIN", result_text)
+            self.assertIn("disable_schedule=true", output.read_text())
+            self.assertIn("outcome=READY", output.read_text())
 
 
 if __name__ == "__main__":
