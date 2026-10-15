@@ -666,21 +666,42 @@ class CapacityAuditTests(unittest.TestCase):
             self.assertIn("1 OCPU / 2 GB", summary.read_text())
             self.assertNotIn(capacity.SSH_PUBLIC_KEY, summary.read_text())
 
-    def test_candidate_is_not_wired_into_live_actions_workflow(self):
+    def test_proposed_workflow_is_staged_for_break_before_make_only(self):
+        """The workflow lives ONLY on an unmerged Draft until old writer off."""
         workflow = (
-            Path(__file__).parents[1]
-            / ".github"
-            / "workflows"
+            Path(__file__).parents[1] / ".github" / "workflows"
             / "guardamar-capacity.yml"
         ).read_text(encoding="utf-8")
-        # No new OCI writer while the original private-repository workflow
-        # remains active. Enable only after audited break-before-make.
-        self.assertEqual(workflow.count("automation.oci_launch_candidate audit"), 1)
-        self.assertNotIn("automation.oci_launch_candidate launch", workflow)
+        self.assertIn('cron: "3-58/5 * * * *"', workflow)
+        self.assertIn("  schedule:", workflow)
+        self.assertIn("  workflow_dispatch:", workflow)
+        self.assertNotIn("  pull_request:", workflow)
+        self.assertNotIn("pull_request_target:", workflow)
+        self.assertIn("  group: guardamar-capacity-search", workflow)
+        self.assertIn("  cancel-in-progress: false", workflow)
+        self.assertEqual(workflow.count(
+            "python -m automation.oci_launch_candidate launch --allow-launch"
+        ), 1)
+        self.assertEqual(workflow.count(
+            "python -m automation.oci_launch_candidate audit"
+        ), 1)
+        self.assertIn("environment: oci-launch", workflow)
+        self.assertIn("environment: oci-readonly", workflow)
+        self.assertIn("github.ref_protected == true", workflow)
+        self.assertIn("github.run_attempt == 1", workflow)
+        self.assertIn("inputs.action == 'launch'", workflow)
+        self.assertIn("inputs.action != 'launch'", workflow)
+        self.assertIn("GUARDAMAR_LAUNCH_SWITCH: ${{ secrets.GUARDAMAR_LAUNCH_SWITCH }}", workflow)
+        self.assertIn("inputs.mode == 'candidate'", workflow)
+        self.assertIn("  disable:", workflow)
+        self.assertIn("gh api --method PUT", workflow)
+        self.assertIn("needs.capacity.outputs.disable_schedule == 'true'", workflow)
         self.assertNotIn("automation.guardamar_capacity launch", workflow)
-        self.assertNotIn("  schedule:", workflow)
         self.assertIn("automation.guardamar_capacity audit", workflow)
-        self.assertNotIn("pull_request:", workflow)
+        # No old read-only secret environment may be used as a writer.
+        writer = workflow.split("\\n  capacity:", 1)[-1].split("\\n  disable:", 1)[0]
+        self.assertIn("environment: oci-launch", writer)
+        self.assertNotIn("environment: oci-readonly", writer)
 
     def test_existing_nine_secrets_allow_read_only_but_not_launch(self):
         # Real read-only environment deliberately has no SSH deployment key.
