@@ -8,6 +8,7 @@ Original behavior was derived from the existing production OCI-only module.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import time
@@ -33,6 +34,26 @@ CAPACITY_STATUS_OUT_OF_HOST_CAPACITY = "OUT_OF_HOST_CAPACITY"
 IMAGE_OCID = os.environ.get("OCI_IMAGE_OCID", "UNCONFIGURED_IMAGE")
 SUBNET_OCID = os.environ.get("OCI_SUBNET_OCID", "UNCONFIGURED_SUBNET")
 SSH_PUBLIC_KEY = os.environ.get("OCI_SSH_PUBLIC_KEY", "UNCONFIGURED_PUBLIC_KEY")
+# Preserve the exact production-approved OCI selectors WITHOUT publishing
+# tenancy, AD, image, subnet or SSH key IDs in this public repository.
+# Any altered selector is rejected before the OCI SDK can launch an instance.
+APPROVED_SELECTOR_SHA256 = {
+    "OCI_COMPARTMENT_OCID": "dd228be21a2eeed391c9af4e106774f2408b5f58f03e380f0b7f1e24b5f04461",
+    "OCI_AVAILABILITY_DOMAIN": "e7c446b7b7b056fbb01f788fe12c1d9cd8754f0a2d63a5c2b8dff52db7001fe2",
+    "OCI_IMAGE_OCID": "6793a7188c22b272ee0f10d9261dda614474d7cf9ca7ec2bd1582b84ac3c8eb0",
+    "OCI_SUBNET_OCID": "fb2d34bf5590053c72db8015dc3b4c2cba64e2ec34a248cc42d8f69ddae04dc9",
+    "OCI_TARGET_DISPLAY_NAME": "83f54c7e62278bb0247c4e1e15a00a2c3d30861f14d57cae2dd6d12b066d183a",
+    "OCI_SSH_PUBLIC_KEY": "c35efc176aa86527822449950c682590ce8b1151d367ab101e3084dbb309b1d2",
+}
+
+
+def matches_original_selector(name: str, value: str) -> bool:
+    expected = APPROVED_SELECTOR_SHA256.get(name)
+    return bool(
+        expected and isinstance(value, str)
+        and hashlib.sha256(value.encode("utf-8")).hexdigest() == expected
+    )
+
 
 FREE_A1_OCPU_LIMIT = 2.0
 FREE_A1_MEMORY_GB_LIMIT = 12.0
@@ -336,6 +357,11 @@ class OciGateway:
                 not IMAGE_OCID.startswith("ocid1.image.oc1.eu-madrid-3.") or
                 not SUBNET_OCID.startswith("ocid1.subnet.oc1.eu-madrid-3.")):
             raise SafetyError("OCI runtime selectors violate approved resource boundaries")
+        if any(
+            not matches_original_selector(name, value)
+            for name, value in required
+        ):
+            raise SafetyError("OCI runtime selectors differ from the approved launch manifest")
 
         # OCI inventory needs nine existing secrets, not the deployment SSH key.
         # The key is mandatory only in the separately authorized write path.
@@ -543,7 +569,8 @@ class OciGateway:
         key = self._ssh_public_key
         if (not isinstance(key, str) or key != SSH_PUBLIC_KEY or
                 not key.startswith(("ssh-rsa ", "ssh-ed25519 ")) or
-                "\n" in key or len(key) > 4096):
+                "\n" in key or len(key) > 4096 or
+                not matches_original_selector("OCI_SSH_PUBLIC_KEY", key)):
             raise SafetyError("launch requires a valid configured SSH public key")
 
         oci = self._oci
