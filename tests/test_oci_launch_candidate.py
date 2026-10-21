@@ -673,8 +673,16 @@ class CapacityAuditTests(unittest.TestCase):
             Path(__file__).parents[1] / ".github" / "workflows"
             / "guardamar-capacity.yml"
         ).read_text(encoding="utf-8")
-        self.assertIn('cron: "3-58/5 * * * *"', workflow)
+        self.assertIn('cron: "3-58/15 * * * *"', workflow)
         self.assertIn("  schedule:", workflow)
+        # Even an unmodified five-minute Termux cron cannot cause
+        # off-slot OCI calls: the runner checks cadence before SDK setup.
+        self.assertIn("Gate manual/backstop launches to 15-minute slots", workflow)
+        self.assertIn('slot=$((10#$minute % 15))', workflow)
+        self.assertIn('slot >= 5 && slot <= 9', workflow)
+        self.assertEqual(
+            workflow.count("if: steps.cadence.outputs.allow == 'true'"), 4
+        )
         self.assertIn("  workflow_dispatch:", workflow)
         self.assertNotIn("  pull_request:", workflow)
         self.assertNotIn("pull_request_target:", workflow)
