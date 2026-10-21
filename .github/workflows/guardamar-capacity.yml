@@ -1,7 +1,7 @@
 name: Guardamar OCI capacity search
 on:
   schedule:
-    - cron: "3-58/5 * * * *"
+    - cron: "3-58/15 * * * *"
   workflow_dispatch:
     inputs:
       action:
@@ -92,17 +92,41 @@ jobs:
     outputs:
       disable_schedule: ${{ steps.capacity.outputs.disable_schedule }}
     steps:
+      # Safety rollback after 2026-10-16 OCI 429. The old phone cron may
+      # still dispatch every five minutes; refuse off-slot runs BEFORE any
+      # OCI SDK setup or API call. Schedule events remain the primary path.
+      - name: Gate manual/backstop launches to 15-minute slots
+        id: cadence
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          if [[ "$EVENT_NAME" == "schedule" ]]; then
+            echo "allow=true" >> "$GITHUB_OUTPUT"
+          else
+            minute=$(date -u +%M)
+            slot=$((10#$minute % 15))
+            if (( slot >= 5 && slot <= 9 )); then
+              echo "allow=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "allow=false" >> "$GITHUB_OUTPUT"
+            fi
+          fi
       - name: Checkout protected main
+        if: steps.cadence.outputs.allow == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: Install Python
+        if: steps.cadence.outputs.allow == 'true'
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
       - name: Install pinned OCI SDK
+        if: steps.cadence.outputs.allow == 'true'
         run: python -m pip install "oci==2.185.2"
       - name: Run exactly one bounded capacity attempt
+        if: steps.cadence.outputs.allow == 'true'
         id: capacity
         continue-on-error: true
         env:
